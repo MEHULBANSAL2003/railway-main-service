@@ -1,3 +1,10 @@
 spring:
   application:
-    name: main-service
+    name: railway-main-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    import: optional:file:${HOME}/Sites/railways/railway-backend/railway-secrets/main-secrets/auth-${spring.profiles.active}.properties
+
+server:
+  port: 8081
