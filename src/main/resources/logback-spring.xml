@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <!-- Set service-specific APP_NAME -->
+  <property name="APP_NAME" value="railway-main-service"/>
+
+  <!-- Include common logging configuration -->
+  <include resource="logback-common.xml"/>
+
+  <!-- Service-specific logger overrides (optional) -->
+  <springProfile name="dev,local">
+    <logger name="com.railway.main_service" level="DEBUG" additivity="false">
+      <appender-ref ref="CONSOLE"/>
+      <appender-ref ref="FILE"/>
+    </logger>
+  </springProfile>
+
+  <springProfile name="prod">
+    <logger name="com.railway.main_service" level="INFO" additivity="false">
+      <appender-ref ref="ASYNC_FILE"/>
+      <appender-ref ref="ASYNC_ERROR"/>
+      <appender-ref ref="ASYNC_JSON"/>
+    </logger>
+  </springProfile>
+</configuration>
