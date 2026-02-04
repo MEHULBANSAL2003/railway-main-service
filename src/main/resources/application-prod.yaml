@@ -6,6 +6,10 @@ spring:
   # Application identification
   application:
     name: railway-main-service
+    access-token:
+      expiry-ms: ${JWT_ACCESS_EXPIRY:900000}      # 15 minutes
+    refresh-token:
+      expiry-ms: ${JWT_REFRESH_EXPIRY:2592000000}
 
   # Database configuration
   datasource:
