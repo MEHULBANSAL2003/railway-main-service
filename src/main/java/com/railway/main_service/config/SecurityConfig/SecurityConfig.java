@@ -7,7 +7,7 @@ import com.railway.common.exceptions.ApiErrorResponse;
 import com.railway.common.security.JwtAuthenticationEntryPoint;
 import com.railway.common.security.JwtAuthenticationFilter;
 
-import com.railway.main_service.constants.ApiConstants;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
