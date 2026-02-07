@@ -49,12 +49,8 @@ public class SecurityConfig {
       .authorizeHttpRequests(auth -> auth
         .requestMatchers("/actuator/health").permitAll()
         .requestMatchers("/actuator/prometheus").permitAll()
-        .requestMatchers("/error").permitAll()
-        .requestMatchers("/api/train/search/**").permitAll()      // Search trains
-        .requestMatchers("/api/train/stations/**").permitAll()    // View stations
-        .requestMatchers("/api/train/routes/**").permitAll()
-        .requestMatchers("/api/train/admin/**").hasRole("ADMIN")
-        .requestMatchers("/api/train/user/**").authenticated()
+        .requestMatchers("/error").permitAll()// Search trains
+        .requestMatchers("/api/**").authenticated()
         .anyRequest().authenticated()
       )
       .exceptionHandling(exception -> exception
