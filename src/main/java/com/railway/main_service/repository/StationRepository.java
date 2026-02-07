@@ -1,4 +1,9 @@
 package com.railway.main_service.repository;
 
-public interface StationRepository {
+import com.railway.main_service.entity.StationEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface StationRepository extends JpaRepository<Long, StationEntity> {
 }
