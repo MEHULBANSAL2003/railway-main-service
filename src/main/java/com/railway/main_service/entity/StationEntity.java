@@ -32,35 +32,29 @@ public class StationEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long station_id;
+  @Column(name = "station_id")  // Add column name mapping
+  private Long id;  // Change to 'id' (Java naming convention)
 
   @Column(nullable = false, unique = true, length = 255)
-  @NotBlank(message = "Station Code is required")
-  private String station_code;
+  private String stationCode;  // Use camelCase
 
   @Column(nullable = false, unique = true, length = 255)
-  @NotBlank(message = "Station Name is required")
-  private String station_name;
+  private String stationName;
 
   @Column(nullable = false, length = 255)
-  @NotBlank(message = "City is required")
   private String city;
 
   @Column(nullable = false, length = 255)
-  @NotBlank(message = "State is required")
   private String state;
 
   @Column(nullable = false, length = 255)
-  @NotBlank(message = "Zone is required")
   private String zone;
 
   @Column(nullable = false)
-  @NotBlank(message = "Number of Platforms is required")
-  private int num_platforms;
+  private int numPlatforms;  // Remove @NotBlank
 
   @Column(nullable = false)
-  @NotBlank(message = "Is Junction is required")
-  private boolean is_junction;
+  private boolean isJunction;  // Remove @NotBlank
 
   @Column(name = "created_by")
   private Long createdBy;
@@ -85,7 +79,4 @@ public class StationEntity {
     createdAt = LocalDateTime.now();
     updatedAt = LocalDateTime.now();
   }
-
-
-
 }

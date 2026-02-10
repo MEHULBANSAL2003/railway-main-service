@@ -5,5 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface StationRepository extends JpaRepository<Long, StationEntity> {
+public interface StationRepository extends JpaRepository<StationEntity, Long> {
+
+  boolean existsByStationCode(String stationCode);
 }
