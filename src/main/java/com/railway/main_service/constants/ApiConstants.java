@@ -10,7 +10,7 @@ public class ApiConstants {
   public static final String ROUTES = API_BASE + "/routes";
 
   public static final String ADD_NEW_STATION = "/admin/add/new/station";
-  public static final String GET_STATIONS = "/get/all";
+  public static final String GET_STATIONS = "/get/all/list";
 
 
 
