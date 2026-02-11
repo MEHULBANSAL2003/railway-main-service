@@ -13,6 +13,7 @@ import com.railway.main_service.utility.excel.ExcelUploadResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,6 +33,7 @@ public class StationController {
   private final StationServiceImpl stationService;
 
   @PostMapping(ApiConstants.ADD_NEW_STATION)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<AddNewStationResponse>> addNewStation(@Valid @RequestBody AddNewStationRequest request) {
     AddNewStationResponse response = stationService.addNewStation(request);
 
@@ -47,6 +49,7 @@ public class StationController {
   }
 
   @PostMapping(ApiConstants.UPLOAD_STATIONS_EXCEL)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<ExcelUploadResult>> uploadStationsExcel(
     @RequestParam("file") MultipartFile file) {
 
