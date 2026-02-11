@@ -50,6 +50,16 @@ public class StationEntity {
   @Column(nullable = false, length = 255)
   private String zone;
 
+  @Column(name = "latitude")
+  private Double latitude;
+
+  @Column(name = "longitude")
+  private Double longitude;
+
+  @Column(name = "is_active", nullable = false)
+  @Builder.Default
+  private Boolean isActive = true;
+
   @Column(nullable = false)
   private int numPlatforms;  // Remove @NotBlank
 

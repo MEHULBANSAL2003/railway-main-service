@@ -9,6 +9,7 @@ import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
 import com.railway.main_service.service.stationService.StationServiceImpl;
+import com.railway.main_service.utility.excel.ExcelUploadResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +18,9 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 
 @RestController
@@ -41,5 +44,13 @@ public class StationController {
 
     PageResponseDto<StationResponse> response = stationService.getAllStations(pageRequest);
     return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @PostMapping(ApiConstants.UPLOAD_STATIONS_EXCEL)
+  public ResponseEntity<ApiResponse<ExcelUploadResult>> uploadStationsExcel(
+    @RequestParam("file") MultipartFile file) {
+
+    ExcelUploadResult result = stationService.uploadStationsExcel(file);
+    return ResponseEntity.ok(ApiResponse.success(result));
   }
 }

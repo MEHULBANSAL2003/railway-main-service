@@ -12,6 +12,7 @@ import com.railway.main_service.entity.StationEntity;
 import com.railway.main_service.mapper.StationMapper;
 import com.railway.main_service.repository.StationRepository;
 import com.railway.main_service.utility.Pagination.PaginationUtils;
+import com.railway.main_service.utility.excel.ExcelUploadResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 
 @Service
@@ -28,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class StationServiceImpl implements StationService{
 
   private final StationRepository stationRepository;
+  private final StationExcelProcessor stationExcelProcessor;
 
   @Override
   @Transactional
@@ -77,5 +80,18 @@ public class StationServiceImpl implements StationService{
     Page<StationEntity> stationPage = stationRepository.findAll(pageable);
 
     return PaginationUtils.toPageResponse(stationPage, StationMapper::toDto);
+  }
+
+  @Override
+  public ExcelUploadResult uploadStationsExcel(MultipartFile file) {
+    log.info("Starting Excel upload for stations. File: {}, Size: {} bytes",
+      file.getOriginalFilename(), file.getSize());
+
+    ExcelUploadResult result = stationExcelProcessor.processExcelFile(file);
+
+    log.info("Excel upload completed. Success: {}, Failed: {}, Total: {}",
+      result.getSuccessCount(), result.getFailureCount(), result.getTotalRows());
+
+    return result;
   }
 }
