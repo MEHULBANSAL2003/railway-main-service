@@ -1,6 +1,7 @@
 package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
+import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.Pagination.PageRequestDto;
@@ -12,6 +13,7 @@ import com.railway.main_service.service.stationService.StationServiceImpl;
 import com.railway.main_service.utility.excel.ExcelUploadResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 
 @RestController
@@ -43,7 +47,6 @@ public class StationController {
   @GetMapping(ApiConstants.GET_STATIONS)
   public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStations(
     @Valid @ModelAttribute PageRequestDto pageRequest) {
-
     PageResponseDto<StationResponse> response = stationService.getAllStations(pageRequest);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
@@ -55,5 +58,21 @@ public class StationController {
 
     ExcelUploadResult result = stationService.uploadStationsExcel(file);
     return ResponseEntity.ok(ApiResponse.success(result));
+  }
+
+  @GetMapping(ApiConstants.SEARCH_STATIONS)
+  public ResponseEntity<ApiResponse<List<StationResponse>>> searchStations(
+    @RequestParam("searchTerm") String searchTerm) {
+
+    if (searchTerm == null || searchTerm.trim().length() < 2) {
+      throw new BaseException(
+        HttpStatus.BAD_REQUEST,
+        "INVALID_SEARCH_TERM",
+        "Search term must be at least 2 characters long"
+      );
+    }
+    List<StationResponse> response = stationService.searchStations(searchTerm);
+
+    return ResponseEntity.ok(ApiResponse.success(response));
   }
 }

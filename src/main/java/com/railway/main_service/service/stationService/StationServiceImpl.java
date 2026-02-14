@@ -22,6 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 
 @Service
 @Loggable
@@ -93,5 +96,32 @@ public class StationServiceImpl implements StationService{
       result.getSuccessCount(), result.getFailureCount(), result.getTotalRows());
 
     return result;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<StationResponse> searchStations(String searchTerm) {
+    log.info("Searching stations with term: {}", searchTerm);
+
+    // Validate search term
+    if (searchTerm == null || searchTerm.trim().isEmpty()) {
+      throw new BaseException(
+        HttpStatus.BAD_REQUEST,
+        "INVALID_SEARCH_TERM",
+        "Search term cannot be empty"
+      );
+    }
+
+    // Trim the search term
+    String trimmedSearchTerm = searchTerm.trim();
+
+    List<StationEntity> stations = stationRepository.searchStations(trimmedSearchTerm);
+
+    log.info("Found {} stations matching search term: {}", stations.size(), trimmedSearchTerm);
+
+    // Convert to DTOs
+    return stations.stream()
+      .map(StationMapper::toDto)
+      .collect(Collectors.toList());
   }
 }

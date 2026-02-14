@@ -8,6 +8,8 @@ import com.railway.main_service.dto.response.station.StationResponse;
 import com.railway.main_service.utility.excel.ExcelUploadResult;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 public interface StationService {
 
   AddNewStationResponse addNewStation(AddNewStationRequest request);
@@ -15,4 +17,6 @@ public interface StationService {
   PageResponseDto<StationResponse> getAllStations(PageRequestDto pageRequest);
 
   ExcelUploadResult uploadStationsExcel(MultipartFile file);
+
+  List<StationResponse> searchStations(String searchTerm);
 }
