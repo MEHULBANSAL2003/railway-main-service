@@ -12,7 +12,7 @@ public class ApiConstants {
   public static final String ADD_NEW_STATION = "/admin/add/new/station";
   public static final String UPLOAD_STATIONS_EXCEL = "/upload/excel";
   public static final String GET_STATIONS = "/get/all/list";
-  public static final String SEARCH_STATIONS = "/search";
+  public static final String SEARCH_STATIONS = "/search/by/name";
   public static final String DELETE_STATION = "/delete/by/station/code";
   public static final String UPDATE_STATION_DETAILS = "/update";
 
