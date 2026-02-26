@@ -36,11 +36,11 @@ public class StateController {
     return ResponseEntity.ok(ApiResponse.success(result));
   }
 
-//  @GetMapping(ApiConstants.GET_STATES)
-//  public ResponseEntity<ApiResponse<List<StateResponse>>> getAllStates() {
-//    List<StateResponse> response = stateService.getAllActiveStates();
-//    return ResponseEntity.ok(ApiResponse.success(response));
-//  }
+  @GetMapping(ApiConstants.GET_STATES)
+  public ResponseEntity<ApiResponse<List<StateResponse>>> getAllStates(@RequestParam(value = "searchTerm", required = false) String searchTerm) {
+    List<StateResponse> response = stateService.getRequiredStates(searchTerm);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
 
 
 
