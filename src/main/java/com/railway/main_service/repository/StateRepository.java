@@ -33,4 +33,6 @@ public interface StateRepository extends JpaRepository<StateEntity, Long> {
   List<StateEntity> searchActiveStates(String searchTerm);
 
   List<StateEntity> findByIsActiveTrue();
+
+  Optional<StateEntity> findByNameIgnoreCase(String name);
 }

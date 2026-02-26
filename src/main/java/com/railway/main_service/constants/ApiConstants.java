@@ -26,6 +26,12 @@ public class ApiConstants {
   public static final String ADD_ZONE = "/add";
   public static final String GET_ZONES = "/get/all";
 
+  public static final String ADD_CITY = "/add/new";
+  public static final String GET_CITIES = "/get/all";
+  public static final String UPLOAD_CITIES_EXCEL = "/upload/excel";
+  public static final String CITIES_BY_STATE_NAME = "/by/state/name";
+  public static final String GET_ALL_CITIES = "/get/all/list";
+
 
 
 
