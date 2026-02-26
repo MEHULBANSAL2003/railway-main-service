@@ -42,7 +42,7 @@ public class CityServiceImpl implements CityService{
     String cityName = request.getCityName().trim();
     String stateName = request.getStateName().trim();
 
-    StateEntity state = stateRepository.findByName(stateName)
+    StateEntity state = stateRepository.findByNameIgnoreCase(stateName)
       .orElseThrow(() -> new BaseException(
         HttpStatus.NOT_FOUND,
         "STATE_NOT_FOUND",
@@ -109,7 +109,10 @@ public class CityServiceImpl implements CityService{
     log.info("Fetching all cities | searchTerm='{}' | page={} size={}",
       search, pageRequest.getPage(), pageRequest.getSize());
 
-    Page<CityEntity> page = cityRepository.findAllWithSearch(search, pageable);
+    Page<CityEntity> page = (search == null)
+      ? cityRepository.findAll(pageable)
+      : cityRepository.findAllByNameStartingWith(search, pageable);
+
     return PaginationUtils.toPageResponse(page, CityMapper::toCityResponse);
   }
 
@@ -120,7 +123,7 @@ public class CityServiceImpl implements CityService{
     }
 
     String trimmedStateName = stateName.trim();
-    stateRepository.findByName(trimmedStateName)
+    stateRepository.findByNameIgnoreCase(trimmedStateName)
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "STATE_NOT_FOUND",
         "No state found with name: " + trimmedStateName));
 
@@ -130,7 +133,10 @@ public class CityServiceImpl implements CityService{
     log.info("Fetching cities for state='{}' | searchTerm='{}' | page={} size={}",
       trimmedStateName, search, pageRequest.getPage(), pageRequest.getSize());
 
-    Page<CityEntity> page = cityRepository.findByStateNameWithSearch(trimmedStateName, search, pageable);
+    Page<CityEntity> page = (search == null)
+      ? cityRepository.findByStateName(trimmedStateName, pageable)
+      : cityRepository.findByStateNameAndNameStartingWith(trimmedStateName, search, pageable);
+
     return PaginationUtils.toPageResponse(page, CityMapper::toCityResponse);
   }
 
