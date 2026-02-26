@@ -1,7 +1,10 @@
 package com.railway.main_service.service.cityService;
 
+import com.railway.main_service.dto.request.Pagination.PageRequestDto;
 import com.railway.main_service.dto.request.city.AddCityRequest;
 import com.railway.main_service.dto.response.city.AddCityResponse;
+import com.railway.main_service.dto.response.city.CityResponse;
+import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.entity.CityEntity;
 import com.railway.main_service.utility.excel.ExcelUploadResult;
 import org.springframework.stereotype.Service;
@@ -26,4 +29,9 @@ public interface CityService {
 //
 //  // Get city by ID
 //  CityResponse getCityById(Long id);
+
+
+  PageResponseDto<CityResponse> getAllCities(String searchTerm, PageRequestDto pageRequest);
+
+  PageResponseDto<CityResponse> getCitiesByStateName(String stateName, String searchTerm, PageRequestDto pageRequest);
 }

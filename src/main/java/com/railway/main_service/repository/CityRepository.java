@@ -1,6 +1,8 @@
 package com.railway.main_service.repository;
 
 import com.railway.main_service.entity.CityEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -37,4 +39,22 @@ public interface CityRepository extends JpaRepository<CityEntity, Long> {
   // Count cities by state
   @Query("SELECT COUNT(c) FROM CityEntity c WHERE c.state.id = :stateId AND c.isActive = true")
   long countActiveCitiesByStateId(@Param("stateId") Long stateId);
+
+
+
+  @Query("SELECT c FROM CityEntity c WHERE " +
+    "(:searchTerm IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+  Page<CityEntity> findAllWithSearch(@Param("searchTerm") String searchTerm, Pageable pageable);
+
+  // Cities by state name - with optional search
+  @Query("SELECT c FROM CityEntity c JOIN c.state s WHERE " +
+    "LOWER(s.name) = LOWER(:stateName) AND " +
+    "(:searchTerm IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+  Page<CityEntity> findByStateNameWithSearch(
+    @Param("stateName") String stateName,
+    @Param("searchTerm") String searchTerm,
+    Pageable pageable);
+
+
+
 }

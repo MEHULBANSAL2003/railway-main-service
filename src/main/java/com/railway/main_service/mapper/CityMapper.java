@@ -10,7 +10,7 @@ public class CityMapper {
     throw new IllegalStateException("Mapper class");
   }
 
-  public static CityResponse toDto(CityEntity entity) {
+  public static CityResponse toCityResponse(CityEntity entity) {
     if (entity == null) {
       return null;
     }
