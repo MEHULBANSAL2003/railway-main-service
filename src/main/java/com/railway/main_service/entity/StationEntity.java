@@ -34,7 +34,7 @@ public class StationEntity {
   @Column(name = "station_code", nullable = false, unique = true, length = 10)
   private String stationCode;  // e.g., "NDLS", "PUNE", "MAS"
 
-  @Column(name = "station_name", nullable = false, length = 100)
+  @Column(name = "station_name", nullable = false, length = 100, unique = true)
   private String stationName;  // e.g., "New Delhi", "Pune Junction"
 
   // ===== FOREIGN KEY: Many stations belong to one city =====
