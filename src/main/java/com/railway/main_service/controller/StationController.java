@@ -44,35 +44,35 @@ public class StationController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-  @GetMapping(ApiConstants.GET_STATIONS)
-  public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStations(
-    @Valid @ModelAttribute PageRequestDto pageRequest) {
-    PageResponseDto<StationResponse> response = stationService.getAllStations(pageRequest);
-    return ResponseEntity.ok(ApiResponse.success(response));
-  }
-
-  @PostMapping(ApiConstants.UPLOAD_STATIONS_EXCEL)
-  @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<ExcelUploadResult>> uploadStationsExcel(
-    @RequestParam("file") MultipartFile file) {
-
-    ExcelUploadResult result = stationService.uploadStationsExcel(file);
-    return ResponseEntity.ok(ApiResponse.success(result));
-  }
-
-  @GetMapping(ApiConstants.SEARCH_STATIONS)
-  public ResponseEntity<ApiResponse<List<StationResponse>>> searchStations(
-    @RequestParam("searchTerm") String searchTerm) {
-
-    if (searchTerm == null || searchTerm.trim().length() < 2) {
-      throw new BaseException(
-        HttpStatus.BAD_REQUEST,
-        "INVALID_SEARCH_TERM",
-        "Search term must be at least 2 characters long"
-      );
-    }
-    List<StationResponse> response = stationService.searchStations(searchTerm);
-
-    return ResponseEntity.ok(ApiResponse.success(response));
-  }
+//  @GetMapping(ApiConstants.GET_STATIONS)
+//  public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStations(
+//    @Valid @ModelAttribute PageRequestDto pageRequest) {
+//    PageResponseDto<StationResponse> response = stationService.getAllStations(pageRequest);
+//    return ResponseEntity.ok(ApiResponse.success(response));
+//  }
+//
+//  @PostMapping(ApiConstants.UPLOAD_STATIONS_EXCEL)
+//  @PreAuthorize("hasRole('SUPER_ADMIN')")
+//  public ResponseEntity<ApiResponse<ExcelUploadResult>> uploadStationsExcel(
+//    @RequestParam("file") MultipartFile file) {
+//
+//    ExcelUploadResult result = stationService.uploadStationsExcel(file);
+//    return ResponseEntity.ok(ApiResponse.success(result));
+//  }
+//
+//  @GetMapping(ApiConstants.SEARCH_STATIONS)
+//  public ResponseEntity<ApiResponse<List<StationResponse>>> searchStations(
+//    @RequestParam("searchTerm") String searchTerm) {
+//
+//    if (searchTerm == null || searchTerm.trim().length() < 2) {
+//      throw new BaseException(
+//        HttpStatus.BAD_REQUEST,
+//        "INVALID_SEARCH_TERM",
+//        "Search term must be at least 2 characters long"
+//      );
+//    }
+//    List<StationResponse> response = stationService.searchStations(searchTerm);
+//
+//    return ResponseEntity.ok(ApiResponse.success(response));
+//  }
 }
