@@ -30,4 +30,13 @@ public interface StationRepository extends JpaRepository<StationEntity, Long> {
 
   @Query("SELECT s.stationCode FROM StationEntity s")
   Set<String> findAllStationCodes();
+
+  @Query(
+    value = "SELECT s FROM StationEntity s " +
+      "JOIN FETCH s.city c " +
+      "JOIN FETCH c.state " +
+      "JOIN FETCH s.zone",
+    countQuery = "SELECT COUNT(s) FROM StationEntity s"
+  )
+  Page<StationEntity> findAllWithDetails(Pageable pageable);
 }

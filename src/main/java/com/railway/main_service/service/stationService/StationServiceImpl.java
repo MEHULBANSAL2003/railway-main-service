@@ -118,11 +118,8 @@ public class StationServiceImpl implements StationService{
   @Override
   @Transactional(readOnly = true)
   public PageResponseDto<StationResponse> getAllStations(PageRequestDto pageRequest) {
-
-    Pageable pageable = PaginationUtils.createPageable(pageRequest);
-
-    Page<StationEntity> stationPage = stationRepository.findAll(pageable);
-
+    Pageable pageable = PaginationUtils.createPageable(pageRequest, PaginationUtils.STATION_SORT_FIELDS);
+    Page<StationEntity> stationPage = stationRepository.findAllWithDetails(pageable);
     return PaginationUtils.toPageResponse(stationPage, StationMapper::toDto);
   }
 

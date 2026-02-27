@@ -9,17 +9,27 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class PaginationUtils {
 
-  /**
-   * Creates a Pageable object from PageRequestDto
-   *
-   * @param pageRequest - Contains page, size, sortBy, sortDirection
-   * @return Pageable object for repository queries
-   */
+  // Maps API sortBy field names → actual JPQL paths for StationEntity
+  public static final Map<String, String> STATION_SORT_FIELDS = Map.of(
+    "id",           "id",
+    "stationCode",  "stationCode",
+    "stationName",  "stationName",
+    "numPlatforms", "numPlatforms",
+    "stationType",  "stationType",
+    "isActive",     "isActive",
+    "createdAt",    "createdAt",
+    // Related entity fields → mapped to their join alias paths
+    "cityName",     "city.name",
+    "stateName",    "city.state.name",
+    "zoneName",     "zone.name"
+  );
+
   public static Pageable createPageable(PageRequestDto pageRequest) {
     Sort sort = pageRequest.getSortDirection().equalsIgnoreCase("DESC")
       ? Sort.by(pageRequest.getSortBy()).descending()
@@ -28,13 +38,20 @@ public class PaginationUtils {
     return PageRequest.of(pageRequest.getPage(), pageRequest.getSize(), sort);
   }
 
-  /**
-   * Converts Spring Data Page to custom PageResponseDto
-   *
-   * @param page - Spring Data Page object
-   * @param mapper - Function to convert Entity to DTO
-   * @return PageResponseDto with converted content
-   */
+  // Use this for entities with JOIN FETCH (stations, etc.)
+  public static Pageable createPageable(PageRequestDto pageRequest, Map<String, String> sortFieldMap) {
+    String requestedSort = pageRequest.getSortBy();
+
+    // Resolve to actual JPQL path, fallback to "id" if unknown
+    String resolvedSort = sortFieldMap.getOrDefault(requestedSort, "id");
+
+    Sort sort = pageRequest.getSortDirection().equalsIgnoreCase("DESC")
+      ? Sort.by(resolvedSort).descending()
+      : Sort.by(resolvedSort).ascending();
+
+    return PageRequest.of(pageRequest.getPage(), pageRequest.getSize(), sort);
+  }
+
   public static <E, D> PageResponseDto<D> toPageResponse(Page<E> page, Function<E, D> mapper) {
     List<D> content = page.getContent()
       .stream()
@@ -53,5 +70,4 @@ public class PaginationUtils {
       .numberOfElements(page.getNumberOfElements())
       .build();
   }
-
 }

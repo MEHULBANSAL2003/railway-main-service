@@ -44,13 +44,13 @@ public class StationController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-//  @GetMapping(ApiConstants.GET_STATIONS)
-//  public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStations(
-//    @Valid @ModelAttribute PageRequestDto pageRequest) {
-//    PageResponseDto<StationResponse> response = stationService.getAllStations(pageRequest);
-//    return ResponseEntity.ok(ApiResponse.success(response));
-//  }
-//
+  @GetMapping(ApiConstants.GET_STATIONS)
+  public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStations(
+    @Valid @ModelAttribute PageRequestDto pageRequest) {
+    PageResponseDto<StationResponse> response = stationService.getAllStations(pageRequest);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
   @PostMapping(ApiConstants.UPLOAD_STATIONS_EXCEL)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<ExcelUploadResult>> uploadStationsExcel(
