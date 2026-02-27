@@ -139,25 +139,13 @@ public class StationServiceImpl implements StationService{
   @Override
   @Transactional(readOnly = true)
   public List<StationResponse> searchStations(String searchTerm) {
-    log.info("Searching stations with term: {}", searchTerm);
+    String term = searchTerm.trim();
+    log.info("Searching stations with term: '{}'", term);
 
-    // Validate search term
-    if (searchTerm == null || searchTerm.trim().isEmpty()) {
-      throw new BaseException(
-        HttpStatus.BAD_REQUEST,
-        "INVALID_SEARCH_TERM",
-        "Search term cannot be empty"
-      );
-    }
+    List<StationEntity> stations = stationRepository.searchStations(term);
 
-    // Trim the search term
-    String trimmedSearchTerm = searchTerm.trim();
+    log.info("Found {} stations matching: '{}'", stations.size(), term);
 
-    List<StationEntity> stations = stationRepository.searchStations(trimmedSearchTerm);
-
-    log.info("Found {} stations matching search term: {}", stations.size(), trimmedSearchTerm);
-
-    // Convert to DTOs
     return stations.stream()
       .map(StationMapper::toDto)
       .collect(Collectors.toList());

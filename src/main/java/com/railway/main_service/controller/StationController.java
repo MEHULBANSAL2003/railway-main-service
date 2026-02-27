@@ -59,20 +59,12 @@ public class StationController {
     ExcelUploadResult result = stationService.uploadStationsExcel(file);
     return ResponseEntity.ok(ApiResponse.success(result));
   }
-//
-//  @GetMapping(ApiConstants.SEARCH_STATIONS)
-//  public ResponseEntity<ApiResponse<List<StationResponse>>> searchStations(
-//    @RequestParam("searchTerm") String searchTerm) {
-//
-//    if (searchTerm == null || searchTerm.trim().length() < 2) {
-//      throw new BaseException(
-//        HttpStatus.BAD_REQUEST,
-//        "INVALID_SEARCH_TERM",
-//        "Search term must be at least 2 characters long"
-//      );
-//    }
-//    List<StationResponse> response = stationService.searchStations(searchTerm);
-//
-//    return ResponseEntity.ok(ApiResponse.success(response));
-//  }
+
+  @GetMapping(ApiConstants.SEARCH_STATIONS)
+  public ResponseEntity<ApiResponse<List<StationResponse>>> searchStations(
+    @RequestParam("searchTerm") String searchTerm) {
+
+    List<StationResponse> response = stationService.searchStations(searchTerm);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
 }
