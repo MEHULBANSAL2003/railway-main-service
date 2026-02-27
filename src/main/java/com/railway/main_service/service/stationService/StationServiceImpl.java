@@ -150,4 +150,26 @@ public class StationServiceImpl implements StationService{
       .map(StationMapper::toDto)
       .collect(Collectors.toList());
   }
+
+  @Override
+@Transactional
+  public StationResponse updateActiveInactiveStatus(String stationCode, boolean isActive) {
+    StationEntity station = stationRepository
+      .findByStationCode(stationCode)
+      .orElseThrow(() -> new BaseException(
+        HttpStatus.NOT_FOUND,
+        "STATION_NOT_FOUND",
+        "Station not found with code: " + stationCode
+      ));
+
+    if (station.getIsActive().equals(isActive)) {
+      return StationMapper.toDto(station);
+    }
+
+    station.setIsActive(isActive);
+    stationRepository.save(station);
+
+    return StationMapper.toDto(station);
+
+  }
 }

@@ -18,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -65,6 +67,14 @@ public class StationController {
     @RequestParam("searchTerm") String searchTerm) {
 
     List<StationResponse> response = stationService.searchStations(searchTerm);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @PatchMapping(ApiConstants.SET_ACTIVE_INACTIVE)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<StationResponse>> changeStatus(@PathVariable String stationCode, @RequestParam(value = "activeStatus", required = true) boolean activeStatus){
+
+    StationResponse response = stationService.updateActiveInactiveStatus(stationCode,activeStatus);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 }

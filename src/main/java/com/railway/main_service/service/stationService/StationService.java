@@ -19,4 +19,6 @@ public interface StationService {
   ExcelUploadResult uploadStationsExcel(MultipartFile file);
 
   List<StationResponse> searchStations(String searchTerm);
+
+  StationResponse updateActiveInactiveStatus(String stationCode, boolean isActive);
 }
