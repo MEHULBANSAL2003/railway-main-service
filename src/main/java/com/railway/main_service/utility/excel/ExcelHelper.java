@@ -122,4 +122,21 @@ public class ExcelHelper {
       return null;
     }
   }
+
+  public static Double getNumericValue(Cell cell) {
+    if (cell == null) return null;
+    return switch (cell.getCellType()) {
+      case NUMERIC -> cell.getNumericCellValue();
+      case STRING -> {
+        try { yield Double.parseDouble(cell.getStringCellValue().trim()); }
+        catch (NumberFormatException e) { yield null; }
+      }
+      default -> null;
+    };
+  }
+
+  public static Integer getIntValue(Cell cell) {
+    Double val = getNumericValue(cell);
+    return val != null ? val.intValue() : null;
+  }
 }

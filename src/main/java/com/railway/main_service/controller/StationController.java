@@ -51,14 +51,14 @@ public class StationController {
 //    return ResponseEntity.ok(ApiResponse.success(response));
 //  }
 //
-//  @PostMapping(ApiConstants.UPLOAD_STATIONS_EXCEL)
-//  @PreAuthorize("hasRole('SUPER_ADMIN')")
-//  public ResponseEntity<ApiResponse<ExcelUploadResult>> uploadStationsExcel(
-//    @RequestParam("file") MultipartFile file) {
-//
-//    ExcelUploadResult result = stationService.uploadStationsExcel(file);
-//    return ResponseEntity.ok(ApiResponse.success(result));
-//  }
+  @PostMapping(ApiConstants.UPLOAD_STATIONS_EXCEL)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<ExcelUploadResult>> uploadStationsExcel(
+    @RequestParam("file") MultipartFile file) {
+
+    ExcelUploadResult result = stationService.uploadStationsExcel(file);
+    return ResponseEntity.ok(ApiResponse.success(result));
+  }
 //
 //  @GetMapping(ApiConstants.SEARCH_STATIONS)
 //  public ResponseEntity<ApiResponse<List<StationResponse>>> searchStations(

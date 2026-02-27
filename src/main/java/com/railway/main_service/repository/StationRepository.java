@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface StationRepository extends JpaRepository<StationEntity, Long> {
@@ -26,4 +27,7 @@ public interface StationRepository extends JpaRepository<StationEntity, Long> {
     "LOWER(s.stationName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
     "LOWER(s.city) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
   List<StationEntity> searchStations(@Param("searchTerm") String searchTerm);
+
+  @Query("SELECT s.stationCode FROM StationEntity s")
+  Set<String> findAllStationCodes();
 }

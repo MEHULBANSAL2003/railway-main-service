@@ -1,42 +1,48 @@
 package com.railway.main_service.service.stationService;
 
-import com.railway.common.exceptions.BaseException;
-import com.railway.common.security.SecurityUtils;
 import com.railway.main_service.dto.request.station.StationExcelDto;
+import com.railway.main_service.entity.CityEntity;
 import com.railway.main_service.entity.StationEntity;
+import com.railway.main_service.entity.ZoneEntity;
+import com.railway.main_service.enums.StationType;
+import com.railway.main_service.repository.CityRepository;
 import com.railway.main_service.repository.StationRepository;
+import com.railway.main_service.repository.ZoneRepository;
 import com.railway.main_service.utility.excel.AbstractExcelProcessor;
 import com.railway.main_service.utility.excel.ExcelHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class StationExcelProcessor extends AbstractExcelProcessor<StationExcelDto, StationEntity> {
 
   private final StationRepository stationRepository;
+  private final CityRepository cityRepository;
+  private final ZoneRepository zoneRepository;
 
-  private static final List<String> REQUIRED_HEADERS = Arrays.asList(
-    "station_code",
-    "station_name",
-    "city",
-    "state",
-    "latitude",
-    "longitude",
-    "zone",
-    "is_junction",
-    "num_platforms",
-    "is_active"
+  private static final List<String> REQUIRED_HEADERS = List.of(
+    "station_code", "station_name", "city_name", "state_name",
+    "zone_name", "station_type", "num_platforms"
   );
+
+  // ─── Caches loaded once per upload ───────────────────────────────────────
+  private Map<String, CityEntity> cityCache;
+  private Map<String, ZoneEntity> zoneCache;
+  private Set<String> existingCodes;
+  // ─────────────────────────────────────────────────────────────────────────
 
   @Override
   protected List<String> getRequiredHeaders() {
@@ -45,40 +51,57 @@ public class StationExcelProcessor extends AbstractExcelProcessor<StationExcelDt
 
   @Override
   protected void validateHeaders(Sheet sheet) {
-    List<String> actualHeaders = ExcelHelper.getHeaders(sheet);
-
-    if (actualHeaders.isEmpty()) {
-      throw new BaseException(HttpStatus.BAD_REQUEST,
-        "INVALID_HEADERS", "Excel file has no headers");
+    Row headerRow = sheet.getRow(0);
+    if (headerRow == null) {
+      throw new IllegalArgumentException("Excel file has no header row");
     }
 
-    List<String> missingHeaders = new ArrayList<>();
-    for (String required : REQUIRED_HEADERS) {
-      if (!actualHeaders.contains(required)) {
-        missingHeaders.add(required);
-      }
+    List<String> actualHeaders = new ArrayList<>();
+    for (int i = 0; i < headerRow.getLastCellNum(); i++) {
+      actualHeaders.add(ExcelHelper.getCellValue(headerRow.getCell(i)).toLowerCase().trim());
     }
 
-    if (!missingHeaders.isEmpty()) {
-      throw new BaseException(HttpStatus.BAD_REQUEST,
-        "INVALID_HEADERS",
-        "Missing required headers: " + String.join(", ", missingHeaders));
+    List<String> missing = REQUIRED_HEADERS.stream()
+      .filter(h -> !actualHeaders.contains(h))
+      .toList();
+
+    if (!missing.isEmpty()) {
+      throw new IllegalArgumentException("Missing required headers: " + missing);
     }
+
+    // Load caches once — avoids N+1 DB calls during processing
+    cityCache = cityRepository.findAll().stream()
+      .collect(Collectors.toMap(
+        c -> (c.getName().toLowerCase() + "|" + c.getState().getName().toLowerCase()),
+        Function.identity(),
+        (a, b) -> a  // keep first on duplicate
+      ));
+
+    zoneCache = zoneRepository.findAll().stream()
+      .collect(Collectors.toMap(
+        z -> z.getName().toLowerCase(),
+        Function.identity()
+      ));
+
+    existingCodes = stationRepository.findAllStationCodes();
+
+    log.info("Caches loaded — cities: {}, zones: {}, existing codes: {}",
+      cityCache.size(), zoneCache.size(), existingCodes.size());
   }
 
   @Override
   protected StationExcelDto parseRow(Row row, int rowIndex) {
     return StationExcelDto.builder()
-      .stationCode(ExcelHelper.getCellValue(row.getCell(0)))
-      .stationName(ExcelHelper.getCellValue(row.getCell(1)))
-      .city(ExcelHelper.getCellValue(row.getCell(2)))
-      .state(ExcelHelper.getCellValue(row.getCell(3)))
-      .latitude(ExcelHelper.getCellValueAsDouble(row.getCell(4)))
-      .longitude(ExcelHelper.getCellValueAsDouble(row.getCell(5)))
-      .zone(ExcelHelper.getCellValue(row.getCell(6)))
-      .isJunction(ExcelHelper.getCellValueAsBoolean(row.getCell(7)))
-      .numPlatforms(ExcelHelper.getCellValueAsInteger(row.getCell(8)))
-      .isActive(ExcelHelper.getCellValueAsBoolean(row.getCell(9)))
+      .stationCode(ExcelHelper.getCellValue(row.getCell(0)).toUpperCase().trim())
+      .stationName(ExcelHelper.getCellValue(row.getCell(1)).trim())
+      .cityName(ExcelHelper.getCellValue(row.getCell(2)).trim())
+      .stateName(ExcelHelper.getCellValue(row.getCell(3)).trim())
+      .zoneName(ExcelHelper.getCellValue(row.getCell(4)).trim())
+      .stationType(ExcelHelper.getCellValue(row.getCell(5)).toUpperCase().trim())
+      .latitude(ExcelHelper.getNumericValue(row.getCell(6)))
+      .longitude(ExcelHelper.getNumericValue(row.getCell(7)))
+      .isActive(parseBoolean(ExcelHelper.getCellValue(row.getCell(8))))
+      .numPlatforms(ExcelHelper.getIntValue(row.getCell(9)))
       .build();
   }
 
@@ -86,99 +109,112 @@ public class StationExcelProcessor extends AbstractExcelProcessor<StationExcelDt
   protected List<String> validateDto(StationExcelDto dto) {
     List<String> errors = new ArrayList<>();
 
-    // Basic validation
-    if (dto.getStationCode() == null || dto.getStationCode().isEmpty()) {
-      errors.add("Station Code is required");
-    } else if (!dto.getStationCode().matches("^[A-Z]{2,5}$")) {
-      errors.add("Station Code must be 2-5 uppercase letters");
+    // Station code
+    if (dto.getStationCode() == null || dto.getStationCode().isBlank()) {
+      errors.add("Station code is required");
+    } else if (!dto.getStationCode().matches("^[A-Z0-9]{2,7}$")) {
+      errors.add("Station code '" + dto.getStationCode() + "' must be 2-7 alphanumeric characters");
     }
 
-    if (dto.getStationName() == null || dto.getStationName().length() < 3) {
-      errors.add("Station Name must be at least 3 characters");
+    // Station name
+    if (dto.getStationName() == null || dto.getStationName().isBlank()) {
+      errors.add("Station name is required");
     }
 
-    if (dto.getCity() == null || dto.getCity().isEmpty()) {
-      errors.add("City is required");
+    // City and state
+    if (dto.getCityName() == null || dto.getCityName().isBlank()) {
+      errors.add("City name is required");
+    }
+    if (dto.getStateName() == null || dto.getStateName().isBlank()) {
+      errors.add("State name is required");
     }
 
-    if (dto.getState() == null || dto.getState().isEmpty()) {
-      errors.add("State is required");
+    // Zone
+    if (dto.getZoneName() == null || dto.getZoneName().isBlank()) {
+      errors.add("Zone name is required");
     }
 
-    if (dto.getLatitude() != null && (dto.getLatitude() < -90 || dto.getLatitude() > 90)) {
-      errors.add("Latitude must be between -90 and 90");
+    // Station type enum
+    if (dto.getStationType() == null || dto.getStationType().isBlank()) {
+      errors.add("Station type is required");
+    } else {
+      try {
+        StationType.valueOf(dto.getStationType());
+      } catch (IllegalArgumentException e) {
+        errors.add("Invalid station type '" + dto.getStationType() +
+          "'. Valid values: " + List.of(StationType.values()));
+      }
     }
 
-    if (dto.getLongitude() != null && (dto.getLongitude() < -180 || dto.getLongitude() > 180)) {
-      errors.add("Longitude must be between -180 and 180");
-    }
-
-    if (dto.getZone() == null || dto.getZone().isEmpty()) {
-      errors.add("Zone is required");
-    }
-
-    if (dto.getNumPlatforms() == null) {
-      errors.add("Number of Platforms is required");
-    } else if (dto.getNumPlatforms() < 1 || dto.getNumPlatforms() > 25) {
-      errors.add("Number of Platforms must be between 1 and 25");
-    }
-
-    if (dto.getIsJunction() == null) {
-      errors.add("Is Junction is required");
+    // Platforms
+    if (dto.getNumPlatforms() == null || dto.getNumPlatforms() < 1) {
+      errors.add("Number of platforms must be at least 1");
     }
 
     return errors;
   }
 
-  /**
-   * CRITICAL: This method checks for duplicates BEFORE attempting batch save
-   * This allows us to skip duplicates and still batch-save valid records
-   */
   @Override
   protected List<String> validateDtoWithDatabase(StationExcelDto dto) {
     List<String> errors = new ArrayList<>();
 
-    // Check database for duplicates
-    if (dto.getStationCode() != null &&
-      stationRepository.existsByStationCode(dto.getStationCode())) {
-      errors.add("Station Code '" + dto.getStationCode() + "' already exists in database");
+    // Check duplicate code — uses in-memory cache, no DB call
+    if (existingCodes.contains(dto.getStationCode())) {
+      errors.add("Station code '" + dto.getStationCode() + "' already exists in database");
+      return errors;
     }
 
-    if (dto.getStationName() != null &&
-      stationRepository.existsByStationName(dto.getStationName())) {
-      errors.add("Station Name '" + dto.getStationName() + "' already exists in database");
+    // Lookup city by name + state — uses cache
+    String cityKey = dto.getCityName().toLowerCase() + "|" + dto.getStateName().toLowerCase();
+    CityEntity city = cityCache.get(cityKey);
+    if (city == null) {
+      errors.add("City '" + dto.getCityName() + "' in state '" + dto.getStateName() + "' not found");
+      return errors;
+    }
+
+    if (!city.getIsActive()) {
+      errors.add("City '" + dto.getCityName() + "' is inactive");
+      return errors;
+    }
+
+    // Lookup zone — uses cache
+    ZoneEntity zone = zoneCache.get(dto.getZoneName().toLowerCase());
+    if (zone == null) {
+      errors.add("Zone '" + dto.getZoneName() + "' not found");
+      return errors;
     }
 
     return errors;
   }
 
-  /**
-   * Batch save - Fast and efficient!
-   * Only called with pre-validated records (no duplicates)
-   */
   @Override
-  @Transactional
-  protected List<StationEntity> saveBatch(List<StationExcelDto> dtoList) {
-    if (dtoList.isEmpty()) {
-      return new ArrayList<>();
-    }
+  protected List<StationEntity> saveBatch(List<StationExcelDto> dtos) {
+    List<StationEntity> entities = dtos.stream()
+      .map(dto -> {
+        String cityKey = dto.getCityName().toLowerCase() + "|" + dto.getStateName().toLowerCase();
+        CityEntity city = cityCache.get(cityKey);
+        ZoneEntity zone = zoneCache.get(dto.getZoneName().toLowerCase());
 
-    Long currentAdminId = SecurityUtils.getCurrentAdminId();
+        return StationEntity.builder()
+          .stationCode(dto.getStationCode())
+          .stationName(dto.getStationName())
+          .city(city)
+          .zone(zone)
+          .stationType(StationType.valueOf(dto.getStationType()))
+          .latitude(dto.getLatitude())
+          .longitude(dto.getLongitude())
+          .isActive(dto.getIsActive() != null ? dto.getIsActive() : true)
+          .numPlatforms(dto.getNumPlatforms())
+          .build();
+      })
+      .toList();
 
-    // Convert all DTOs to Entities
-    List<StationEntity> entities = dtoList.stream()
-      .map(dto -> StationEntity.builder()
-        .stationCode(dto.getStationCode())
-        .stationName(dto.getStationName())
-        .latitude(dto.getLatitude())
-        .longitude(dto.getLongitude())
-        .numPlatforms(dto.getNumPlatforms())
-        .isActive(dto.getIsActive() != null ? dto.getIsActive() : true)
-        .createdBy(currentAdminId)
-        .build())
-      .collect(Collectors.toList());
-
-    // Single batch insert - FAST!
     return stationRepository.saveAll(entities);
+  }
+
+  private Boolean parseBoolean(String value) {
+    if (value == null || value.isBlank()) return true;
+    return value.equalsIgnoreCase("yes") || value.equalsIgnoreCase("true")
+      || value.equals("1") || value.equalsIgnoreCase("active");
   }
 }
