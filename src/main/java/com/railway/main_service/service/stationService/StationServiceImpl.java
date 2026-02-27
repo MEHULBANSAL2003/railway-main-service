@@ -41,7 +41,6 @@ public class StationServiceImpl implements StationService{
   private final StationExcelProcessor stationExcelProcessor;
   private final CityRepository cityRepository;
   private final ZoneRepository zoneRepository;
-  private final StateRepository stateRepository;
 
   @Override
   @Transactional
