@@ -1,20 +1,8 @@
 package com.railway.main_service.entity;
 
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import com.railway.main_service.enums.StationType;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -24,31 +12,54 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "stations", indexes = {
-  @Index(name = "idx_station_code", columnList = "station_code"),
-  @Index(name = "idx_station_name", columnList = "station_name")
-})
+@Table(
+  name = "stations",
+  indexes = {
+    @Index(name = "idx_station_code", columnList = "station_code"),
+    @Index(name = "idx_station_name", columnList = "station_name"),
+    @Index(name = "idx_station_city", columnList = "city_id"),
+    @Index(name = "idx_station_zone", columnList = "zone_id")
+  },
+  uniqueConstraints = {
+    @UniqueConstraint(name = "uk_station_code", columnNames = "station_code")
+  }
+)
 public class StationEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "station_id")  // Add column name mapping
-  private Long id;  // Change to 'id' (Java naming convention)
+  @Column(name = "station_id")
+  private Long id;
 
-  @Column(nullable = false, unique = true, length = 255)
-  private String stationCode;  // Use camelCase
+  @Column(name = "station_code", nullable = false, unique = true, length = 10)
+  private String stationCode;  // e.g., "NDLS", "PUNE", "MAS"
 
-  @Column(nullable = false, unique = true, length = 255)
-  private String stationName;
+  @Column(name = "station_name", nullable = false, length = 100)
+  private String stationName;  // e.g., "New Delhi", "Pune Junction"
 
-  @Column(nullable = false, length = 255)
-  private String city;
+  // ===== FOREIGN KEY: Many stations belong to one city =====
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(
+    name = "city_id",
+    nullable = false,
+    foreignKey = @ForeignKey(name = "fk_station_city")
+  )
+  private CityEntity city;
+  // ========================================================
 
-  @Column(nullable = false, length = 255)
-  private String state;
+  // ===== FOREIGN KEY: Many stations belong to one zone =====
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(
+    name = "zone_id",
+    nullable = false,
+    foreignKey = @ForeignKey(name = "fk_station_zone")
+  )
+  private ZoneEntity zone;
+  // ========================================================
 
-  @Column(nullable = false, length = 255)
-  private String zone;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "station_type", nullable = false, length = 30)
+  private StationType stationType;
 
   @Column(name = "latitude")
   private Double latitude;
@@ -60,11 +71,8 @@ public class StationEntity {
   @Builder.Default
   private Boolean isActive = true;
 
-  @Column(nullable = false)
-  private int numPlatforms;  // Remove @NotBlank
-
-  @Column(nullable = false)
-  private boolean isJunction;  // Remove @NotBlank
+  @Column(name = "num_platforms", nullable = false)
+  private Integer numPlatforms;
 
   @Column(name = "created_by")
   private Long createdBy;
@@ -87,6 +95,11 @@ public class StationEntity {
   @PrePersist
   protected void onCreate() {
     createdAt = LocalDateTime.now();
+    updatedAt = LocalDateTime.now();
+  }
+
+  @PreUpdate
+  protected void onUpdate() {
     updatedAt = LocalDateTime.now();
   }
 }

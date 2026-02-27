@@ -48,7 +48,7 @@ public class ZoneEntity {
   private LocalDateTime updatedAt;
 
   // One zone has many stations
-  @OneToMany(mappedBy = "zone")
+  @OneToMany(mappedBy = "zone", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   private List<StationEntity> stations = new ArrayList<>();
 
