@@ -8,9 +8,14 @@ import com.railway.main_service.dto.request.station.AddNewStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
+import com.railway.main_service.entity.CityEntity;
 import com.railway.main_service.entity.StationEntity;
+import com.railway.main_service.entity.ZoneEntity;
 import com.railway.main_service.mapper.StationMapper;
+import com.railway.main_service.repository.CityRepository;
+import com.railway.main_service.repository.StateRepository;
 import com.railway.main_service.repository.StationRepository;
+import com.railway.main_service.repository.ZoneRepository;
 import com.railway.main_service.utility.Pagination.PaginationUtils;
 import com.railway.main_service.utility.excel.ExcelUploadResult;
 import lombok.RequiredArgsConstructor;
@@ -34,41 +39,78 @@ public class StationServiceImpl implements StationService{
 
   private final StationRepository stationRepository;
   private final StationExcelProcessor stationExcelProcessor;
+  private final CityRepository cityRepository;
+  private final ZoneRepository zoneRepository;
+  private final StateRepository stateRepository;
 
   @Override
   @Transactional
   public AddNewStationResponse addNewStation(AddNewStationRequest request) {
 
-     boolean isStationCodeExists = stationRepository.existsByStationCode(request.getStationCode());
+    String stationCode = request.getStationCode().trim().toUpperCase();
+    if (stationRepository.existsByStationCode(stationCode)) {
+      throw new BaseException(
+        HttpStatus.CONFLICT,
+        "STATION_ALREADY_EXISTS",
+        "Station with code '" + stationCode + "' already exists"
+      );
+    }
 
-     if (isStationCodeExists){
-       throw new BaseException(HttpStatus.CONFLICT,"STATION_ALREADY_EXISTS","Station already exists");
-     }
+
+    CityEntity city = cityRepository.findById(request.getCityId())
+      .orElseThrow(() -> new BaseException(
+        HttpStatus.NOT_FOUND,
+        "CITY_NOT_FOUND",
+        "City not found with id: " + request.getCityId()
+      ));
+
+    if(!city.getState().getIsActive() || !city.getIsActive()){
+        throw new BaseException(
+        HttpStatus.BAD_REQUEST,
+        "CITY_STATE_INACTIVE",
+        "City or state is inactive");
+    }
+
+    if(!city.getState().getId().equals(request.getStateId())){
+      throw new BaseException(
+        HttpStatus.BAD_REQUEST,
+        "CITY_STATE_MISMATCH",
+        "City state does not match with state id: " + request.getStateId()
+      );
+    }
+
+    ZoneEntity zone = zoneRepository.findById(request.getZoneId())
+      .orElseThrow(() -> new BaseException(
+        HttpStatus.NOT_FOUND,
+        "ZONE_NOT_FOUND",
+        "Zone not found with id: " + request.getZoneId()
+      ));
 
     StationEntity station = StationEntity.builder()
-      .stationCode(request.getStationCode())  // Fixed field names
-      .stationName(request.getStationName())
-      .city(request.getCity())
-      .state(request.getState())
-      .zone(request.getZone())
+      .stationCode(stationCode)
+      .stationName(request.getStationName().trim())
+      .city(city)
+      .zone(zone)
+      .stationType(request.getStationType())
       .numPlatforms(request.getNumPlatforms())
-      .isJunction(request.isJunction())
+      .latitude(request.getLatitude())
+      .longitude(request.getLongitude())
       .createdBy(SecurityUtils.getCurrentAdminId())
       .build();
 
-    StationEntity savedStation = stationRepository.save(station);
+    StationEntity saved = stationRepository.save(station);
 
     return AddNewStationResponse.builder()
-      .stationId(savedStation.getId())
-      .stationCode(savedStation.getStationCode())
-      .stationName(savedStation.getStationName())
-      .city(savedStation.getCity())
-      .state(savedStation.getState())
-      .zone(savedStation.getZone())
-      .numPlatforms(savedStation.getNumPlatforms())
-      .isJunction(savedStation.isJunction())
-      .createdBy(savedStation.getCreatedBy())
-      .createdAt(savedStation.getCreatedAt())
+      .stationId(saved.getId())
+      .stationCode(saved.getStationCode())
+      .stationName(saved.getStationName())
+      .cityName(saved.getCity().getName())
+      .stateName(saved.getCity().getState().getName())
+      .zoneName(saved.getZone().getName())
+      .stationType(saved.getStationType())
+      .numPlatforms(saved.getNumPlatforms())
+      .createdBy(saved.getCreatedBy())
+      .createdAt(saved.getCreatedAt())
       .message("Station created successfully")
       .build();
   }

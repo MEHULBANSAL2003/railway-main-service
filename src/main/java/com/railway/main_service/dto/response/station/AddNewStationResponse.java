@@ -1,5 +1,6 @@
 package com.railway.main_service.dto.response.station;
 
+import com.railway.main_service.enums.StationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,11 +17,11 @@ public class AddNewStationResponse {
   private Long stationId;
   private String stationCode;
   private String stationName;
-  private String city;
-  private String state;
-  private String zone;
+  private String cityName;
+  private String stateName;
+  private String zoneName;
+  private StationType stationType;
   private int numPlatforms;
-  private boolean isJunction;
   private Long createdBy;
   private LocalDateTime createdAt;
   private String message;

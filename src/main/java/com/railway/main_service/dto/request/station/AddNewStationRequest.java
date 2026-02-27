@@ -1,42 +1,38 @@
 package com.railway.main_service.dto.request.station;
 
-
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
+import com.railway.main_service.enums.StationType;
+import jakarta.validation.constraints.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class AddNewStationRequest {
 
   @NotBlank(message = "Station Code is required")
-  @Size(min = 2, max = 5, message = "Station Code must be between 2 and 5 characters")
-  @Pattern(regexp = "^[A-Z]{2,5}$", message = "Station Code must be 2-5 uppercase letters only")
+  @Size(min = 2, max = 5)
+  @Pattern(regexp = "^[A-Z]{2,5}$", message = "Station Code must be 2-5 uppercase letters")
   private String stationCode;
 
   @NotBlank(message = "Station Name is required")
-  @Size(min = 3, max = 100, message = "Station Name must be between 3 and 100 characters")
-  @Pattern(regexp = "^[A-Za-z\\s\\-.()]+$", message = "Station Name can only contain letters, spaces, hyphens, dots, and parentheses")
+  @Size(min = 3, max = 100)
   private String stationName;
 
-  @NotBlank(message = "City is required")
-  private String city;
+  @NotNull(message = "State Id is required")
+  private Long stateId;
 
-  @NotBlank(message = "State is required")
-  private String state;
+  @NotNull(message = "City Id is required")
+  private Long cityId;
 
-  @NotBlank(message = "Zone is required")
-  private String zone;
 
-  @Min(value = 1, message = "Number of platforms must be at least 1")  // Remove @NotBlank
+  @NotNull(message = "Zone Id is required")
+  private Long zoneId;
+
+  @NotNull(message = "Station Type is required")
+  private StationType stationType;
+
+  @Min(value = 1, message = "Number of platforms must be at least 1")
   @Max(value = 25, message = "Number of platforms cannot exceed 25")
-  private int numPlatforms;
+  private Integer numPlatforms;
 
-  private boolean isJunction;  // Remove @NotBlank - booleans can't be blank
+  private Double latitude;
+  private Double longitude;
 }
