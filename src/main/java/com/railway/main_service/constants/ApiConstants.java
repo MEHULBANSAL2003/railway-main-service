@@ -1,7 +1,7 @@
 package com.railway.main_service.constants;
 
 public class ApiConstants {
-  public static final String API_BASE = "/api";
+  public static final String API_BASE = "/api/main";
 
   public static final String STATIONS = API_BASE + "/stations";
 

@@ -167,6 +167,16 @@ public class StationServiceImpl implements StationService{
     }
 
     station.setIsActive(isActive);
+    station.setUpdatedAt(java.time.LocalDateTime.now());
+    station.setUpdatedBy(SecurityUtils.getCurrentAdminId());
+    if(!isActive){
+      station.setDeletedAt(java.time.LocalDateTime.now());
+      station.setDeletedBy(SecurityUtils.getCurrentAdminId());
+    }
+    else{
+      station.setDeletedAt(null);
+      station.setDeletedBy(null);
+    }
     stationRepository.save(station);
 
     return StationMapper.toDto(station);
