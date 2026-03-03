@@ -20,7 +20,7 @@ public class ApiConstants {
   public static final String UPDATE_STATION_DETAILS = "/update/details/{stationCode}";
   public static final String DELETE_STATION = "/delete/{stationCode}";
   public static final String GET_ALL_PERMANENTLY_DELETED_STATIONS = "/get/all/permanent/deleted";
-  public static final String RESTORE_STATION = "/restore/{stationCode}";
+  public static final String RESTORE_DELETED_STATION = "/restore/{stationCode}";
 
 
     public static final String UPLOAD_STATES_DATA_BY_EXCEL = "/upload/excel";

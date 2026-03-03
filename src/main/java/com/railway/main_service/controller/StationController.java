@@ -12,6 +12,7 @@ import com.railway.main_service.dto.request.station.UpdateStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
 import com.railway.main_service.dto.response.station.DeleteStationResponse;
+import com.railway.main_service.dto.response.station.RestoreDeletedStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
 import com.railway.main_service.service.stationService.StationServiceImpl;
 import com.railway.main_service.utility.excel.ExcelUploadResult;
@@ -50,18 +51,10 @@ public class StationController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-//  @GetMapping(ApiConstants.GET_STATIONS)
-//  @Deprecated
-//  public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStations(
-//    @Valid @ModelAttribute PageRequestDto pageRequest) {
-//    PageResponseDto<StationResponse> response = stationService.getAllStations(pageRequest);
-//    return ResponseEntity.ok(ApiResponse.success(response));
-//  }
+
 @GetMapping(ApiConstants.GET_STATIONS)
-@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
 public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStations(
   @Valid @ModelAttribute StationFilterRequest filter) {
-
   PageResponseDto<StationResponse> response = stationService.getAllStations(filter);
   return ResponseEntity.ok(ApiResponse.success(response));
 }
@@ -75,13 +68,7 @@ public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStati
     return ResponseEntity.ok(ApiResponse.success(result));
   }
 
-//  @GetMapping(ApiConstants.SEARCH_STATIONS)
-//  public ResponseEntity<ApiResponse<List<StationResponse>>> searchStations(
-//    @RequestParam("searchTerm") String searchTerm) {
-//
-//    List<StationResponse> response = stationService.searchStations(searchTerm);
-//    return ResponseEntity.ok(ApiResponse.success(response));
-//  }
+
 
   @PostMapping(ApiConstants.SET_ACTIVE_INACTIVE)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
@@ -103,8 +90,25 @@ public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStati
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<DeleteStationResponse>> deleteStation(@PathVariable String stationCode,
                                                                           @Valid @RequestBody DeleteStationRequest request){
-
     DeleteStationResponse response = stationService.deleteStation(stationCode, request);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @GetMapping(ApiConstants.GET_ALL_PERMANENTLY_DELETED_STATIONS)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllPermanentlyDeletedStations(
+    @Valid @ModelAttribute StationFilterRequest filter
+  ){
+    PageResponseDto<StationResponse> response = stationService.getAllPermanentlyDeletedStations(filter);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @PostMapping(ApiConstants.RESTORE_DELETED_STATION)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<RestoreDeletedStationResponse>> restoreDeletedStations(
+    @PathVariable String stationCode
+  ){
+    RestoreDeletedStationResponse response = stationService.restoreDeletedStation(stationCode);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 }

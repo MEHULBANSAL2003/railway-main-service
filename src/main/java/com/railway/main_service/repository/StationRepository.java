@@ -56,4 +56,14 @@ public interface StationRepository
     countQuery = "SELECT COUNT(s) FROM StationEntity s WHERE s.isPermanentlyDeleted = false"
   )
   Page<StationEntity> findAllWithDetails(Pageable pageable);
+
+  @Query(
+    value = "SELECT s FROM StationEntity s " +
+      "JOIN FETCH s.city c " +
+      "JOIN FETCH c.state " +
+      "JOIN FETCH s.zone " +
+      "WHERE s.isPermanentlyDeleted = false",
+    countQuery = "SELECT COUNT(s) FROM StationEntity s WHERE s.isPermanentlyDeleted = true"
+  )
+  Page<StationEntity> findAllPermanentlyDeletedWithDetails(Pageable pageable);
 }

@@ -11,6 +11,7 @@ import com.railway.main_service.dto.request.station.UpdateStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
 import com.railway.main_service.dto.response.station.DeleteStationResponse;
+import com.railway.main_service.dto.response.station.RestoreDeletedStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
 import com.railway.main_service.entity.CityEntity;
 import com.railway.main_service.entity.StationEntity;
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -155,6 +157,38 @@ public class StationServiceImpl implements StationService{
     } else {
       // Specification path — handles all filter combinations
       Specification<StationEntity> spec = StationSpecification.build(filter);
+      page = stationRepository.findAll(spec, pageable);
+    }
+
+    return PaginationUtils.toPageResponse(page, StationMapper::toDto);
+  }
+
+  @Override
+  public PageResponseDto<StationResponse> getAllPermanentlyDeletedStations(StationFilterRequest filter) {
+    String sortBy = STATION_SORT_FIELDS.contains(filter.getSortBy())
+      ? filter.getSortBy()
+      : "stationId";
+
+    Sort.Direction direction = "DESC".equalsIgnoreCase(filter.getSortDirection())
+      ? Sort.Direction.DESC
+      : Sort.Direction.ASC;
+
+    Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(),
+      Sort.by(direction, sortBy));
+
+    // ── Fast path — no filters, use optimised fetch-join query ───────────────
+    boolean hasFilters = hasValue(filter.getSearchTerm())
+      || hasValue(filter.getState())
+      || hasValue(filter.getZone())
+      || hasValue(filter.getStationType())
+      || filter.getIsActive() != null;
+
+    Page<StationEntity> page;
+    if (!hasFilters) {
+      page = stationRepository.findAllPermanentlyDeletedWithDetails(pageable);
+    } else {
+      // Specification path — handles all filter combinations
+      Specification<StationEntity> spec = StationSpecification.buildDeleted(filter);
       page = stationRepository.findAll(spec, pageable);
     }
 
@@ -388,5 +422,42 @@ public class StationServiceImpl implements StationService{
     return DeleteStationResponse.builder()
       .message("Station '" + station.getStationName() + "' (" + stationCode + ") deleted successfully.")
       .build();
+  }
+
+  @Override
+  public RestoreDeletedStationResponse restoreDeletedStation(String stationCode) {
+
+    StationEntity station = stationRepository.findByStationCodeIncludeDeleted(stationCode)
+      .orElseThrow(() -> new BaseException(
+        HttpStatus.NOT_FOUND, "STATION_NOT_FOUND",
+        "Station not found with code: " + stationCode
+      ));
+
+    if (!station.getIsPermanentlyDeleted()) {
+      throw new BaseException(
+        HttpStatus.BAD_REQUEST, "STATION_NOT_DELETED",
+        "Station '" + stationCode + "' is not deleted. Nothing to restore."
+      );
+    }
+
+    if (stationRepository.existsByStationNameAndIsPermanentlyDeletedFalse(station.getStationName())) {
+      throw new BaseException(
+        HttpStatus.CONFLICT, "STATION_NAME_TAKEN",
+        "Cannot restore — another active station with name '" + station.getStationName() + "' now exists."
+      );
+    }
+
+    station.setIsPermanentlyDeleted(false);
+    station.setIsActive(true);
+    station.setDeletedAt(null);
+    station.setDeletedBy(null);
+    station.setUpdatedAt(LocalDateTime.now());
+    station.setUpdatedBy(SecurityUtils.getCurrentAdminId());
+   stationRepository.save(station);
+
+    return RestoreDeletedStationResponse.builder()
+      .message("Station '" + station.getStationName() + "' (" + stationCode + ") restored successfully.")
+      .build();
+
   }
 }
