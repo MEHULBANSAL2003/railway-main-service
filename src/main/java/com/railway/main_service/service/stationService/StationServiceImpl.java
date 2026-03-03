@@ -450,6 +450,7 @@ public class StationServiceImpl implements StationService{
     station.setIsPermanentlyDeleted(false);
     station.setIsActive(true);
     station.setDeletedAt(null);
+    station.setPermanentDeleteReason(null);
     station.setDeletedBy(null);
     station.setUpdatedAt(LocalDateTime.now());
     station.setUpdatedBy(SecurityUtils.getCurrentAdminId());

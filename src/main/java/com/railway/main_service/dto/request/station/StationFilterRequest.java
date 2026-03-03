@@ -20,7 +20,7 @@ public class StationFilterRequest {
   private int size = 20;
 
   // ── Sort ─────────────────────────────────────────────────
-  private String sortBy        = "stationId";
+  private String sortBy = "id";
   private String sortDirection = "ASC";
 
   // ── Search / Filters (all optional) ─────────────────────

@@ -62,7 +62,7 @@ public interface StationRepository
       "JOIN FETCH s.city c " +
       "JOIN FETCH c.state " +
       "JOIN FETCH s.zone " +
-      "WHERE s.isPermanentlyDeleted = false",
+      "WHERE s.isPermanentlyDeleted = true",
     countQuery = "SELECT COUNT(s) FROM StationEntity s WHERE s.isPermanentlyDeleted = true"
   )
   Page<StationEntity> findAllPermanentlyDeletedWithDetails(Pageable pageable);
