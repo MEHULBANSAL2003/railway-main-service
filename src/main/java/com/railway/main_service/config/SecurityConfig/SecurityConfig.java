@@ -62,7 +62,7 @@ public class SecurityConfig {
           SessionCreationPolicy.STATELESS)
       )
       .addFilterBefore(
-        jwtAuthenticationFilter,
+          jwtAuthenticationFilter,
         UsernamePasswordAuthenticationFilter.class
       );
 

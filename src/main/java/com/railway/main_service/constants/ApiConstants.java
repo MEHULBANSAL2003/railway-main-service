@@ -20,7 +20,7 @@ public class ApiConstants {
   public static final String UPDATE_STATION_DETAILS = "/update";
 
 
-  public static final String UPLOAD_STATES_DATA_BY_EXCEL = "/upload/excel";
+    public static final String UPLOAD_STATES_DATA_BY_EXCEL = "/upload/excel";
   public static final String GET_STATES = "/get/all/list";
 
   public static final String ADD_ZONE = "/add";
