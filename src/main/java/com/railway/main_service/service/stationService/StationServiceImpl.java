@@ -5,6 +5,7 @@ import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
 import com.railway.main_service.dto.request.Pagination.PageRequestDto;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
+import com.railway.main_service.dto.request.station.StationFilterRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
@@ -16,18 +17,23 @@ import com.railway.main_service.repository.CityRepository;
 import com.railway.main_service.repository.StateRepository;
 import com.railway.main_service.repository.StationRepository;
 import com.railway.main_service.repository.ZoneRepository;
+import com.railway.main_service.specification.StationSpecification;
 import com.railway.main_service.utility.Pagination.PaginationUtils;
 import com.railway.main_service.utility.excel.ExcelUploadResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
@@ -41,6 +47,11 @@ public class StationServiceImpl implements StationService{
   private final StationExcelProcessor stationExcelProcessor;
   private final CityRepository cityRepository;
   private final ZoneRepository zoneRepository;
+
+  private static final Set<String> STATION_SORT_FIELDS = Set.of(
+    "id", "stationCode", "stationName", "stationType",
+    "numPlatforms", "isActive", "createdAt", "updatedAt", "cityName"
+  );
 
   @Override
   @Transactional
@@ -117,10 +128,41 @@ public class StationServiceImpl implements StationService{
 
   @Override
   @Transactional(readOnly = true)
-  public PageResponseDto<StationResponse> getAllStations(PageRequestDto pageRequest) {
-    Pageable pageable = PaginationUtils.createPageable(pageRequest, PaginationUtils.STATION_SORT_FIELDS);
-    Page<StationEntity> stationPage = stationRepository.findAllWithDetails(pageable);
-    return PaginationUtils.toPageResponse(stationPage, StationMapper::toDto);
+  public PageResponseDto<StationResponse> getAllStations(StationFilterRequest filter) {
+
+    // ── Validate sort field ──────────────────────────────────────────────────
+    String sortBy = STATION_SORT_FIELDS.contains(filter.getSortBy())
+      ? filter.getSortBy()
+      : "stationId";
+
+    Sort.Direction direction = "DESC".equalsIgnoreCase(filter.getSortDirection())
+      ? Sort.Direction.DESC
+      : Sort.Direction.ASC;
+
+    Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(),
+      Sort.by(direction, sortBy));
+
+    // ── Fast path — no filters, use optimised fetch-join query ───────────────
+    boolean hasFilters = hasValue(filter.getSearchTerm())
+      || hasValue(filter.getState())
+      || hasValue(filter.getZone())
+      || hasValue(filter.getStationType())
+      || filter.getIsActive() != null;
+
+    Page<StationEntity> page;
+    if (!hasFilters) {
+      page = stationRepository.findAllWithDetails(pageable);
+    } else {
+      // Specification path — handles all filter combinations
+      Specification<StationEntity> spec = StationSpecification.build(filter);
+      page = stationRepository.findAll(spec, pageable);
+    }
+
+    return PaginationUtils.toPageResponse(page, StationMapper::toDto);
+  }
+
+  private boolean hasValue(String s) {
+    return s != null && !s.isBlank();
   }
 
   @Override

@@ -6,6 +6,7 @@ import com.railway.common.logging.Loggable;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.Pagination.PageRequestDto;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
+import com.railway.main_service.dto.request.station.StationFilterRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
@@ -46,12 +47,21 @@ public class StationController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-  @GetMapping(ApiConstants.GET_STATIONS)
-  public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStations(
-    @Valid @ModelAttribute PageRequestDto pageRequest) {
-    PageResponseDto<StationResponse> response = stationService.getAllStations(pageRequest);
-    return ResponseEntity.ok(ApiResponse.success(response));
-  }
+//  @GetMapping(ApiConstants.GET_STATIONS)
+//  @Deprecated
+//  public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStations(
+//    @Valid @ModelAttribute PageRequestDto pageRequest) {
+//    PageResponseDto<StationResponse> response = stationService.getAllStations(pageRequest);
+//    return ResponseEntity.ok(ApiResponse.success(response));
+//  }
+@GetMapping(ApiConstants.GET_STATIONS)
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStations(
+  @Valid @ModelAttribute StationFilterRequest filter) {
+
+  PageResponseDto<StationResponse> response = stationService.getAllStations(filter);
+  return ResponseEntity.ok(ApiResponse.success(response));
+}
 
   @PostMapping(ApiConstants.UPLOAD_STATIONS_EXCEL)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
@@ -70,7 +80,7 @@ public class StationController {
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 
-  @PatchMapping(ApiConstants.SET_ACTIVE_INACTIVE)
+  @PostMapping(ApiConstants.SET_ACTIVE_INACTIVE)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<StationResponse>> changeStatus(@PathVariable String stationCode, @RequestParam(value = "activeStatus", required = true) boolean activeStatus){
 
