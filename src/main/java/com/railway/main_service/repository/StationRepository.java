@@ -45,4 +45,6 @@ public interface StationRepository extends JpaRepository<StationEntity, Long>,
   List<StationEntity> searchStations(@Param("searchTerm") String searchTerm);
 
   Optional<StationEntity> findByStationCode(String stationCode);
+
+  boolean existsByStationNameAndStationCodeNot(String stationName, String stationCode);
 }

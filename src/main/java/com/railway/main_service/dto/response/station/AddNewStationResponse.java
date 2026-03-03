@@ -1,5 +1,6 @@
 package com.railway.main_service.dto.response.station;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.railway.main_service.enums.StationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class AddNewStationResponse {
 
   private Long stationId;
@@ -24,6 +26,8 @@ public class AddNewStationResponse {
   private int numPlatforms;
   private Long createdBy;
   private LocalDateTime createdAt;
+  private LocalDateTime updatedAt;
+  private Long updatedBy;
   private String message;
 
 }

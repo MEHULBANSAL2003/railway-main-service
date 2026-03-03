@@ -7,6 +7,7 @@ import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.Pagination.PageRequestDto;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
 import com.railway.main_service.dto.request.station.StationFilterRequest;
+import com.railway.main_service.dto.request.station.UpdateStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
@@ -85,6 +86,14 @@ public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStati
   public ResponseEntity<ApiResponse<StationResponse>> changeStatus(@PathVariable String stationCode, @RequestParam(value = "activeStatus", required = true) boolean activeStatus){
 
     StationResponse response = stationService.updateActiveInactiveStatus(stationCode,activeStatus);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @PostMapping(ApiConstants.UPDATE_STATION_DETAILS)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<AddNewStationResponse>> updateStationDetail(@PathVariable String stationCode, @RequestBody UpdateStationRequest request){
+
+    AddNewStationResponse response = stationService.updateStationDetails(stationCode,request);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 }

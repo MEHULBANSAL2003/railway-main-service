@@ -6,6 +6,7 @@ import com.railway.common.security.SecurityUtils;
 import com.railway.main_service.dto.request.Pagination.PageRequestDto;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
 import com.railway.main_service.dto.request.station.StationFilterRequest;
+import com.railway.main_service.dto.request.station.UpdateStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
@@ -223,5 +224,139 @@ public class StationServiceImpl implements StationService{
 
     return StationMapper.toDto(station);
 
+  }
+
+  @Override
+  @Transactional
+  public AddNewStationResponse updateStationDetails(String stationCode, UpdateStationRequest request) {
+
+    // ── 1. Fetch station ─────────────────────────────────────────────────────
+    StationEntity station = stationRepository.findByStationCode(stationCode)
+      .orElseThrow(() -> new BaseException(
+        HttpStatus.NOT_FOUND,
+        "STATION_NOT_FOUND",
+        "Station not found with code: " + stationCode
+      ));
+
+    // ── 2. Station must be active to be updated ──────────────────────────────
+    if (!station.getIsActive()) {
+      throw new BaseException(
+        HttpStatus.BAD_REQUEST,
+        "STATION_INACTIVE",
+        "Cannot update an inactive station. Activate it first."
+      );
+    }
+
+    // ── 3. cityId and stateId must be provided together or not at all ────────
+    boolean hasCityId  = request.getCityId()  != null;
+    boolean hasStateId = request.getStateId() != null;
+
+    if (hasCityId != hasStateId) {
+      throw new BaseException(
+        HttpStatus.BAD_REQUEST,
+        "CITY_STATE_REQUIRED_TOGETHER",
+        "cityId and stateId must both be provided together, or both omitted."
+      );
+    }
+
+    // ── 4. Validate and apply city + state ───────────────────────────────────
+    if (hasCityId) {
+      CityEntity city = cityRepository.findById(request.getCityId())
+        .orElseThrow(() -> new BaseException(
+          HttpStatus.NOT_FOUND,
+          "CITY_NOT_FOUND",
+          "City not found with id: " + request.getCityId()
+        ));
+
+      // City must be active
+      if (!city.getIsActive()) {
+        throw new BaseException(
+          HttpStatus.BAD_REQUEST,
+          "CITY_INACTIVE",
+          "City with id " + request.getCityId() + " is inactive."
+        );
+      }
+
+      // State must be active
+      if (!city.getState().getIsActive()) {
+        throw new BaseException(
+          HttpStatus.BAD_REQUEST,
+          "STATE_INACTIVE",
+          "State associated with city " + city.getName() + " is inactive."
+        );
+      }
+
+      // City must belong to the provided state
+      if (!city.getState().getId().equals(request.getStateId())) {
+        throw new BaseException(
+          HttpStatus.BAD_REQUEST,
+          "CITY_STATE_MISMATCH",
+          "City '" + city.getName() + "' does not belong to state id: " + request.getStateId()
+        );
+      }
+
+      station.setCity(city);
+    }
+
+    // ── 5. Validate and apply zone ───────────────────────────────────────────
+    if (request.getZoneId() != null) {
+      ZoneEntity zone = zoneRepository.findById(request.getZoneId())
+        .orElseThrow(() -> new BaseException(
+          HttpStatus.NOT_FOUND,
+          "ZONE_NOT_FOUND",
+          "Zone not found with id: " + request.getZoneId()
+        ));
+
+      // Optional: check zone is active if your ZoneEntity has isActive
+       if (!zone.getIsActive()) {
+         throw new BaseException(HttpStatus.BAD_REQUEST, "ZONE_INACTIVE", "Zone is inactive.");
+       }
+
+      station.setZone(zone);
+    }
+
+    // ── 6. Apply scalar field updates (only if provided) ────────────────────
+    if (request.getStationName() != null && !request.getStationName().isBlank()) {
+      // Check for duplicate name (exclude current station)
+      boolean nameConflict = stationRepository
+        .existsByStationNameAndStationCodeNot(request.getStationName().trim(), stationCode);
+      if (nameConflict) {
+        throw new BaseException(
+          HttpStatus.CONFLICT,
+          "STATION_NAME_EXISTS",
+          "Another station with name '" + request.getStationName() + "' already exists."
+        );
+      }
+      station.setStationName(request.getStationName().trim());
+    }
+
+    if (request.getStationType() != null) {
+      station.setStationType(request.getStationType());
+    }
+
+    if (request.getNumPlatforms() != null) {
+      station.setNumPlatforms(request.getNumPlatforms());
+    }
+    station.setUpdatedBy(SecurityUtils.getCurrentAdminId());
+    station.setUpdatedAt(java.time.LocalDateTime.now());
+
+    // ── 7. Save and return ───────────────────────────────────────────────────
+    StationEntity saved = stationRepository.save(station);
+
+    return AddNewStationResponse.builder()
+      .stationId(saved.getId())
+      .stationCode(saved.getStationCode())
+      .stationName(saved.getStationName())
+      .cityName(saved.getCity().getName())
+      .stateName(saved.getCity().getState().getName())
+      .zoneName(saved.getZone().getName())
+      .stationType(saved.getStationType())
+      .numPlatforms(saved.getNumPlatforms())
+      .createdBy(saved.getCreatedBy())
+      .createdAt(saved.getCreatedAt())
+      .updatedAt(saved.getUpdatedAt())
+      .updatedBy(saved.getUpdatedBy())
+      .message("Station updated successfully")
+      .build();
   }
 }

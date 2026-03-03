@@ -3,6 +3,7 @@ package com.railway.main_service.service.stationService;
 import com.railway.main_service.dto.request.Pagination.PageRequestDto;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
 import com.railway.main_service.dto.request.station.StationFilterRequest;
+import com.railway.main_service.dto.request.station.UpdateStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
@@ -22,4 +23,6 @@ public interface StationService {
   List<StationResponse> searchStations(String searchTerm);
 
   StationResponse updateActiveInactiveStatus(String stationCode, boolean isActive);
+
+  AddNewStationResponse updateStationDetails(String stationCode, UpdateStationRequest request);
 }
