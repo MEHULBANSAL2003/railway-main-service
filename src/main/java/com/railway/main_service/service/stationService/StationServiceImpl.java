@@ -5,6 +5,7 @@ import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
 import com.railway.main_service.dto.request.Pagination.PageRequestDto;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
+import com.railway.main_service.dto.request.station.DeleteStationRequest;
 import com.railway.main_service.dto.request.station.StationFilterRequest;
 import com.railway.main_service.dto.request.station.UpdateStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
@@ -60,14 +61,11 @@ public class StationServiceImpl implements StationService{
   public AddNewStationResponse addNewStation(AddNewStationRequest request) {
 
     String stationCode = request.getStationCode().trim().toUpperCase();
-    if (stationRepository.existsByStationCodeAndIsPermanentlyDeletedFalse(stationCode)) {
-      throw new BaseException(
-        HttpStatus.CONFLICT,
-        "STATION_ALREADY_EXISTS",
-        "Station with code '" + stationCode + "' already exists"
-      );
-    }
 
+    if(stationRepository.existsByStationNameOrStationCode(request.getStationName().trim(), stationCode)){
+      throw new BaseException(HttpStatus.CONFLICT, "STATION_NAME_EXISTS",
+        "Station with name '" + request.getStationName() + "' already exists. Needed Super Admin access to activate that (if permanently deleted)");
+    }
 
     CityEntity city = cityRepository.findById(request.getCityId())
       .orElseThrow(() -> new BaseException(
@@ -306,14 +304,18 @@ public class StationServiceImpl implements StationService{
     // ── 6. Apply scalar field updates (only if provided) ────────────────────
     if (request.getStationName() != null && !request.getStationName().isBlank()) {
       // Check for duplicate name (exclude current station)
-      boolean nameConflict = stationRepository
-        .existsByStationNameAndStationCodeNotAndIsPermanentlyDeletedFalse(request.getStationName().trim(), stationCode);
+      boolean nameConflict = stationRepository.existsByStationNameOrStationCode(request.getStationName().trim(), stationCode);
       if (nameConflict) {
         throw new BaseException(
           HttpStatus.CONFLICT,
           "STATION_NAME_EXISTS",
           "Another station with name '" + request.getStationName() + "' already exists."
         );
+      }
+
+      if(stationRepository.existsByStationName(request.getStationName())){
+        throw new BaseException(HttpStatus.CONFLICT, "STATION_NAME_EXISTS",
+          "Station with name '" + request.getStationName() + "' already exists. Needed Super Admin access to activate that");
       }
       station.setStationName(request.getStationName().trim());
     }
@@ -350,7 +352,7 @@ public class StationServiceImpl implements StationService{
 
   @Override
   @Transactional
-  public DeleteStationResponse deleteStation(String stationCode) {
+  public DeleteStationResponse deleteStation(String stationCode, DeleteStationRequest request) {
 
     StationEntity station = stationRepository.findByStationCodeIncludeDeleted(stationCode)
       .orElseThrow(() -> new BaseException(
@@ -379,6 +381,8 @@ public class StationServiceImpl implements StationService{
     station.setIsActive(false);
     station.setDeletedAt(java.time.LocalDateTime.now());
     station.setDeletedBy(SecurityUtils.getCurrentAdminId());
+    station.setPermanentDeleteReason(request.getReason().trim());
+
     stationRepository.save(station);
 
     return DeleteStationResponse.builder()

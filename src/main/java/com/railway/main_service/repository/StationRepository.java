@@ -18,6 +18,11 @@ public interface StationRepository
   extends JpaRepository<StationEntity, Long>,
   JpaSpecificationExecutor<StationEntity> {
 
+  boolean existsByStationCode(String stationCode);
+  boolean existsByStationName(String stationName);
+
+  boolean existsByStationNameOrStationCode(String stationName, String stationCode);
+
   // ── Existence checks (exclude deleted) ──────────────────
   boolean existsByStationCodeAndIsPermanentlyDeletedFalse(String stationCode);
 

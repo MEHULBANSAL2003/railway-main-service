@@ -2,6 +2,7 @@ package com.railway.main_service.service.stationService;
 
 import com.railway.main_service.dto.request.Pagination.PageRequestDto;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
+import com.railway.main_service.dto.request.station.DeleteStationRequest;
 import com.railway.main_service.dto.request.station.StationFilterRequest;
 import com.railway.main_service.dto.request.station.UpdateStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
@@ -26,7 +27,7 @@ public interface StationService {
 
   AddNewStationResponse updateStationDetails(String stationCode, UpdateStationRequest request);
 
-  DeleteStationResponse deleteStation(String stationCode);
+  DeleteStationResponse deleteStation(String stationCode, DeleteStationRequest request);
 
 
 }

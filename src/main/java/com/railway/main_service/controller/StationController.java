@@ -6,6 +6,7 @@ import com.railway.common.logging.Loggable;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.Pagination.PageRequestDto;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
+import com.railway.main_service.dto.request.station.DeleteStationRequest;
 import com.railway.main_service.dto.request.station.StationFilterRequest;
 import com.railway.main_service.dto.request.station.UpdateStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
@@ -100,9 +101,10 @@ public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStati
 
   @PostMapping(ApiConstants.DELETE_STATION)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<DeleteStationResponse>> deleteStation(@PathVariable String stationCode){
+  public ResponseEntity<ApiResponse<DeleteStationResponse>> deleteStation(@PathVariable String stationCode,
+                                                                          @Valid @RequestBody DeleteStationRequest request){
 
-    DeleteStationResponse response = stationService.deleteStation(stationCode);
+    DeleteStationResponse response = stationService.deleteStation(stationCode, request);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 }
