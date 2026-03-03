@@ -39,6 +39,8 @@ public class StationSpecification {
 
       List<Predicate> predicates = new ArrayList<>();
 
+      predicates.add(cb.equal(root.get("isPermanentlyDeleted"), false));
+
       // ── searchTerm: prefix LIKE on code, name, city, state, zone ──
       if (hasValue(filter.getSearchTerm())) {
         String pattern = filter.getSearchTerm().trim().toLowerCase() + "%";

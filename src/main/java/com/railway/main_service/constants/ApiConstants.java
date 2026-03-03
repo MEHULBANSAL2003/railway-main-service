@@ -18,6 +18,7 @@ public class ApiConstants {
   public static final String SEARCH_STATIONS = "/search/by/name";
   public static final String SET_ACTIVE_INACTIVE = "/set/active/inactive/{stationCode}";
   public static final String UPDATE_STATION_DETAILS = "/update/details/{stationCode}";
+  public static final String DELETE_STATION = "/delete/{stationCode}";
 
 
     public static final String UPLOAD_STATES_DATA_BY_EXCEL = "/upload/excel";

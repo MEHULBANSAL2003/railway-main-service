@@ -14,37 +14,41 @@ import java.util.Optional;
 import java.util.Set;
 
 @Repository
-public interface StationRepository extends JpaRepository<StationEntity, Long>,
+public interface StationRepository
+  extends JpaRepository<StationEntity, Long>,
   JpaSpecificationExecutor<StationEntity> {
 
-  boolean existsByStationCode(String stationCode);
-  boolean existsByStationName(String stationName);
+  // ── Existence checks (exclude deleted) ──────────────────
+  boolean existsByStationCodeAndIsPermanentlyDeletedFalse(String stationCode);
 
-  @Query("SELECT s.stationCode FROM StationEntity s")
+  boolean existsByStationNameAndIsPermanentlyDeletedFalse(String stationName);
+
+  boolean existsByStationNameAndStationCodeNotAndIsPermanentlyDeletedFalse(
+    String stationName, String stationCode);
+
+  // ── Used for Excel/bulk upload duplicate code check ──────
+  @Query("SELECT s.stationCode FROM StationEntity s WHERE s.isPermanentlyDeleted = false")
   Set<String> findAllStationCodes();
 
+  // ── Normal lookup — excludes deleted ─────────────────────
+  @Query("SELECT s FROM StationEntity s " +
+    "WHERE s.stationCode = :stationCode " +
+    "AND s.isPermanentlyDeleted = false")
+  Optional<StationEntity> findByStationCode(@Param("stationCode") String stationCode);
+
+  // ── Used ONLY inside deleteStation — includes deleted ────
+  // Needed to detect "already deleted" and return proper error
+  @Query("SELECT s FROM StationEntity s WHERE s.stationCode = :stationCode")
+  Optional<StationEntity> findByStationCodeIncludeDeleted(@Param("stationCode") String stationCode);
+
+  // ── Paginated list (no filters) — excludes deleted ───────
   @Query(
     value = "SELECT s FROM StationEntity s " +
       "JOIN FETCH s.city c " +
       "JOIN FETCH c.state " +
-      "JOIN FETCH s.zone",
-    countQuery = "SELECT COUNT(s) FROM StationEntity s"
+      "JOIN FETCH s.zone " +
+      "WHERE s.isPermanentlyDeleted = false",
+    countQuery = "SELECT COUNT(s) FROM StationEntity s WHERE s.isPermanentlyDeleted = false"
   )
   Page<StationEntity> findAllWithDetails(Pageable pageable);
-
-  // Search across code, name, city name, state name, zone name
-  @Query("SELECT s FROM StationEntity s " +
-    "JOIN FETCH s.city c " +
-    "JOIN FETCH c.state st " +
-    "JOIN FETCH s.zone z " +
-    "WHERE LOWER(s.stationCode) LIKE LOWER(CONCAT(:searchTerm, '%')) OR " +
-    "LOWER(s.stationName) LIKE LOWER(CONCAT(:searchTerm, '%')) OR " +
-    "LOWER(c.name) LIKE LOWER(CONCAT(:searchTerm, '%')) OR " +
-    "LOWER(st.name) LIKE LOWER(CONCAT(:searchTerm, '%')) OR " +
-    "LOWER(z.name) LIKE LOWER(CONCAT(:searchTerm, '%'))")
-  List<StationEntity> searchStations(@Param("searchTerm") String searchTerm);
-
-  Optional<StationEntity> findByStationCode(String stationCode);
-
-  boolean existsByStationNameAndStationCodeNot(String stationName, String stationCode);
 }

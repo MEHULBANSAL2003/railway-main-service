@@ -9,6 +9,7 @@ import com.railway.main_service.dto.request.station.StationFilterRequest;
 import com.railway.main_service.dto.request.station.UpdateStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
+import com.railway.main_service.dto.response.station.DeleteStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
 import com.railway.main_service.entity.CityEntity;
 import com.railway.main_service.entity.StationEntity;
@@ -59,7 +60,7 @@ public class StationServiceImpl implements StationService{
   public AddNewStationResponse addNewStation(AddNewStationRequest request) {
 
     String stationCode = request.getStationCode().trim().toUpperCase();
-    if (stationRepository.existsByStationCode(stationCode)) {
+    if (stationRepository.existsByStationCodeAndIsPermanentlyDeletedFalse(stationCode)) {
       throw new BaseException(
         HttpStatus.CONFLICT,
         "STATION_ALREADY_EXISTS",
@@ -179,20 +180,7 @@ public class StationServiceImpl implements StationService{
     return result;
   }
 
-  @Override
-  @Transactional(readOnly = true)
-  public List<StationResponse> searchStations(String searchTerm) {
-    String term = searchTerm.trim();
-    log.info("Searching stations with term: '{}'", term);
 
-    List<StationEntity> stations = stationRepository.searchStations(term);
-
-    log.info("Found {} stations matching: '{}'", stations.size(), term);
-
-    return stations.stream()
-      .map(StationMapper::toDto)
-      .collect(Collectors.toList());
-  }
 
   @Override
 @Transactional
@@ -319,7 +307,7 @@ public class StationServiceImpl implements StationService{
     if (request.getStationName() != null && !request.getStationName().isBlank()) {
       // Check for duplicate name (exclude current station)
       boolean nameConflict = stationRepository
-        .existsByStationNameAndStationCodeNot(request.getStationName().trim(), stationCode);
+        .existsByStationNameAndStationCodeNotAndIsPermanentlyDeletedFalse(request.getStationName().trim(), stationCode);
       if (nameConflict) {
         throw new BaseException(
           HttpStatus.CONFLICT,
@@ -357,6 +345,44 @@ public class StationServiceImpl implements StationService{
       .updatedAt(saved.getUpdatedAt())
       .updatedBy(saved.getUpdatedBy())
       .message("Station updated successfully")
+      .build();
+  }
+
+  @Override
+  @Transactional
+  public DeleteStationResponse deleteStation(String stationCode) {
+
+    StationEntity station = stationRepository.findByStationCodeIncludeDeleted(stationCode)
+      .orElseThrow(() -> new BaseException(
+        HttpStatus.NOT_FOUND,
+        "STATION_NOT_FOUND",
+        "Station not found with code: " + stationCode
+      ));
+
+    if(station.getIsActive()){
+      throw new BaseException(
+        HttpStatus.BAD_REQUEST,
+        "STATION_ACTIVE",
+        "Cannot delete an active station. Deactivate it first."
+      );
+    }
+
+    if (station.getIsPermanentlyDeleted()) {
+      throw new BaseException(
+        HttpStatus.GONE,
+        "STATION_ALREADY_DELETED",
+        "Station '" + stationCode + "' has already been deleted."
+      );
+    }
+
+    station.setIsPermanentlyDeleted(true);
+    station.setIsActive(false);
+    station.setDeletedAt(java.time.LocalDateTime.now());
+    station.setDeletedBy(SecurityUtils.getCurrentAdminId());
+    stationRepository.save(station);
+
+    return DeleteStationResponse.builder()
+      .message("Station '" + station.getStationName() + "' (" + stationCode + ") deleted successfully.")
       .build();
   }
 }

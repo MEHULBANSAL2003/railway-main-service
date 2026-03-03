@@ -10,6 +10,7 @@ import com.railway.main_service.dto.request.station.StationFilterRequest;
 import com.railway.main_service.dto.request.station.UpdateStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
+import com.railway.main_service.dto.response.station.DeleteStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
 import com.railway.main_service.service.stationService.StationServiceImpl;
 import com.railway.main_service.utility.excel.ExcelUploadResult;
@@ -73,13 +74,13 @@ public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStati
     return ResponseEntity.ok(ApiResponse.success(result));
   }
 
-  @GetMapping(ApiConstants.SEARCH_STATIONS)
-  public ResponseEntity<ApiResponse<List<StationResponse>>> searchStations(
-    @RequestParam("searchTerm") String searchTerm) {
-
-    List<StationResponse> response = stationService.searchStations(searchTerm);
-    return ResponseEntity.ok(ApiResponse.success(response));
-  }
+//  @GetMapping(ApiConstants.SEARCH_STATIONS)
+//  public ResponseEntity<ApiResponse<List<StationResponse>>> searchStations(
+//    @RequestParam("searchTerm") String searchTerm) {
+//
+//    List<StationResponse> response = stationService.searchStations(searchTerm);
+//    return ResponseEntity.ok(ApiResponse.success(response));
+//  }
 
   @PostMapping(ApiConstants.SET_ACTIVE_INACTIVE)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
@@ -94,6 +95,14 @@ public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStati
   public ResponseEntity<ApiResponse<AddNewStationResponse>> updateStationDetail(@PathVariable String stationCode, @RequestBody UpdateStationRequest request){
 
     AddNewStationResponse response = stationService.updateStationDetails(stationCode,request);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
+
+  @PostMapping(ApiConstants.DELETE_STATION)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<DeleteStationResponse>> deleteStation(@PathVariable String stationCode){
+
+    DeleteStationResponse response = stationService.deleteStation(stationCode);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 }

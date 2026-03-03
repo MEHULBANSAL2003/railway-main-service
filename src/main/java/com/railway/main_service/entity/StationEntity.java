@@ -74,6 +74,9 @@ public class StationEntity {
   @Column(name = "num_platforms", nullable = false)
   private Integer numPlatforms;
 
+  @Column(name = "is_permanently_deleted", nullable = false)
+  private Boolean isPermanentlyDeleted = false;
+
   @Column(name = "created_by")
   private Long createdBy;
 

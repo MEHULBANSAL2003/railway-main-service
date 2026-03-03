@@ -6,6 +6,7 @@ import com.railway.main_service.dto.request.station.StationFilterRequest;
 import com.railway.main_service.dto.request.station.UpdateStationRequest;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
+import com.railway.main_service.dto.response.station.DeleteStationResponse;
 import com.railway.main_service.dto.response.station.StationResponse;
 import com.railway.main_service.utility.excel.ExcelUploadResult;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,9 +21,12 @@ public interface StationService {
 
   ExcelUploadResult uploadStationsExcel(MultipartFile file);
 
-  List<StationResponse> searchStations(String searchTerm);
 
   StationResponse updateActiveInactiveStatus(String stationCode, boolean isActive);
 
   AddNewStationResponse updateStationDetails(String stationCode, UpdateStationRequest request);
+
+  DeleteStationResponse deleteStation(String stationCode);
+
+
 }
