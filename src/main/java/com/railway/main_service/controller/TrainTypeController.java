@@ -1,0 +1,68 @@
+package com.railway.main_service.controller;
+
+import com.railway.common.exceptions.ApiResponse;
+import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.trainType.AddTrainTypeRequest;
+import com.railway.main_service.dto.request.trainType.UpdateTrainTypeRequest;
+import com.railway.main_service.dto.response.trainType.TrainTypeResponse;
+import com.railway.main_service.service.trainTypeService.TrainTypeService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(ApiConstants.TRAIN_TYPES)
+@RequiredArgsConstructor
+public class TrainTypeController {
+
+  private final TrainTypeService trainTypeService;
+
+  @PostMapping(ApiConstants.ADD_TRAIN_TYPE)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<TrainTypeResponse>> addTrainType(
+    @Valid @RequestBody AddTrainTypeRequest request) {
+
+    return ResponseEntity.ok(ApiResponse.success(trainTypeService.addTrainType(request)));
+  }
+
+  @PostMapping(ApiConstants.UPDATE_TRAIN_TYPE)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<TrainTypeResponse>> updateTrainType(
+    @PathVariable String typeCode,
+    @Valid @RequestBody UpdateTrainTypeRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(trainTypeService.updateTrainType(typeCode, request)));
+  }
+
+  @PostMapping(ApiConstants.CHANGE_STATUS)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<TrainTypeResponse>> toggleStatus(
+    @PathVariable String typeCode,
+    @RequestParam boolean isActive) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainTypeService.toggleStatus(typeCode, isActive)));
+  }
+
+  @GetMapping(ApiConstants.GET_TRAIN_TYPES)
+  public ResponseEntity<ApiResponse<List<TrainTypeResponse>>> getAllForDropdown() {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainTypeService.getAllForDropdown()));
+  }
+
+  @GetMapping(ApiConstants.GET_TRAIN_TYPES)
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<List<TrainTypeResponse>>> getAllForAdmin(
+    @RequestParam(required = false) String search) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainTypeService.getAllForAdmin(search)));
+  }
+}
