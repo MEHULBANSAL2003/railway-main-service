@@ -10,6 +10,7 @@ public class ApiConstants {
   public static final String CITIES = API_BASE + "/cities";
   public static final String ZONES = API_BASE + "/zones";
   public static final String TRAIN_TYPES = API_BASE + "/train-types";
+  public static final String COACH_TYPES = API_BASE + "/coach-types";
 
   //stations
   public static final String ADD_NEW_STATION = "/admin/add/new/station";
@@ -41,6 +42,13 @@ public class ApiConstants {
   public static final String GET_TRAIN_TYPES_ADMIN = "/get/all/admin";
  public static final String UPDATE_TRAIN_TYPE = "/update/details/{typeCode}";
  public static final String CHANGE_STATUS = "/change/status/{typeCode}";
+
+ //coach types
+  public static final String ADD_COACH_TYPE = "/add/new";
+  public static final String GET_COACH_TYPES = "/get/all";
+  public static final String GET_COACH_TYPES_ADMIN = "/get/all/admin";
+  public static final String UPDATE_COACH_TYPE = "/update/details/{typeCode}";
+  public static final String CHANGE_STATUS_COACH_TYPE = "/change/status/{typeCode}";
 
 
   private ApiConstants() {
