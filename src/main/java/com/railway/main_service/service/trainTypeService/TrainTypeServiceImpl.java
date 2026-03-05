@@ -106,8 +106,9 @@ public class TrainTypeServiceImpl implements TrainTypeService {
   }
 
   @Override
-  public List<TrainTypeResponse> getAllForDropdown() {
-    return trainTypeRepository.findAllByIsActiveTrueOrderByTypeCodeAsc()
+  public List<TrainTypeResponse> getAllForDropdown(String search) {
+    String searchTerm = (search != null && !search.isBlank()) ? search.trim() : null;
+    return trainTypeRepository.findActiveForDropdown(searchTerm)
       .stream().map(e -> toResponse(e, null)).toList();
   }
 

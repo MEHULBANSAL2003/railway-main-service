@@ -12,7 +12,7 @@ public interface TrainTypeService {
   TrainTypeResponse addTrainType(AddTrainTypeRequest request);
   TrainTypeResponse updateTrainType(String typeCode, UpdateTrainTypeRequest request);
   TrainTypeResponse toggleStatus(String typeCode, boolean isActive);
-  List<TrainTypeResponse> getAllForDropdown();
+  List<TrainTypeResponse> getAllForDropdown(String search);
   List<TrainTypeResponse> getAllForAdmin(String search);
 
 

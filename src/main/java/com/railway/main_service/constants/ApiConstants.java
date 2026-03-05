@@ -38,7 +38,8 @@ public class ApiConstants {
 // train types
   public static final String ADD_TRAIN_TYPE = "/add/new";
   public static final String GET_TRAIN_TYPES = "/get/all";
- public static final String UPDATE_TRAIN_TYPE = "/update/{typeCode}";
+  public static final String GET_TRAIN_TYPES_ADMIN = "/get/all/admin";
+ public static final String UPDATE_TRAIN_TYPE = "/update/details/{typeCode}";
  public static final String CHANGE_STATUS = "/change/status/{typeCode}";
 
 

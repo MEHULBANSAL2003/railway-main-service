@@ -53,12 +53,14 @@ public class TrainTypeController {
   }
 
   @GetMapping(ApiConstants.GET_TRAIN_TYPES)
-  public ResponseEntity<ApiResponse<List<TrainTypeResponse>>> getAllForDropdown() {
+  public ResponseEntity<ApiResponse<List<TrainTypeResponse>>> getAllForDropdown(
+    @RequestParam(required = false) String search
+  ) {
     return ResponseEntity.ok(ApiResponse.success(
-      trainTypeService.getAllForDropdown()));
+      trainTypeService.getAllForDropdown(search)));
   }
 
-  @GetMapping(ApiConstants.GET_TRAIN_TYPES)
+  @GetMapping(ApiConstants.GET_TRAIN_TYPES_ADMIN)
   @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<List<TrainTypeResponse>>> getAllForAdmin(
     @RequestParam(required = false) String search) {
