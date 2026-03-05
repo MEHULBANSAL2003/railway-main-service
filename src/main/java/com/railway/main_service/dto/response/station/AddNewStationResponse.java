@@ -22,6 +22,7 @@ public class AddNewStationResponse {
   private String cityName;
   private String stateName;
   private String zoneName;
+  private boolean isActive;
   private StationType stationType;
   private int numPlatforms;
   private Long createdBy;

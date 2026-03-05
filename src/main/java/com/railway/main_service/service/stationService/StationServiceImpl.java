@@ -3,7 +3,6 @@ package com.railway.main_service.service.stationService;
 import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
-import com.railway.main_service.dto.request.Pagination.PageRequestDto;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
 import com.railway.main_service.dto.request.station.DeleteStationRequest;
 import com.railway.main_service.dto.request.station.StationFilterRequest;
@@ -123,6 +122,7 @@ public class StationServiceImpl implements StationService{
       .numPlatforms(saved.getNumPlatforms())
       .createdBy(saved.getCreatedBy())
       .createdAt(saved.getCreatedAt())
+      .isActive(saved.getIsActive())
       .message("Station created successfully")
       .build();
   }
@@ -380,6 +380,7 @@ public class StationServiceImpl implements StationService{
       .createdAt(saved.getCreatedAt())
       .updatedAt(saved.getUpdatedAt())
       .updatedBy(saved.getUpdatedBy())
+      .isActive(saved.getIsActive())
       .message("Station updated successfully")
       .build();
   }
