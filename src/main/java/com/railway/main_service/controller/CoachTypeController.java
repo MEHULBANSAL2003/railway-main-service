@@ -56,9 +56,11 @@ public class CoachTypeController {
   }
 
   @GetMapping(ApiConstants.GET_COACH_TYPES)
-  public ResponseEntity<ApiResponse<List<CoachTypeResponse>>> getAllForDropdown() {
+  public ResponseEntity<ApiResponse<List<CoachTypeResponse>>> getAllForDropdown(
+    @RequestParam(required = false) String search
+  ) {
     return ResponseEntity.ok(ApiResponse.success(
-      coachTypeService.getAllForDropdown()));
+      coachTypeService.getAllForDropdown(search)));
   }
 
   @GetMapping(ApiConstants.GET_COACH_TYPES_ADMIN)

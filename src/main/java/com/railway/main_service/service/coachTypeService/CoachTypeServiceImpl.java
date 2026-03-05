@@ -103,8 +103,9 @@ public class CoachTypeServiceImpl implements CoachTypeService {
   }
 
   @Override
-  public List<CoachTypeResponse> getAllForDropdown() {
-    return coachTypeRepository.findAllByIsActiveTrueOrderByTypeCodeAsc()
+  public List<CoachTypeResponse> getAllForDropdown(String search) {
+    String s = (search != null && !search.isBlank()) ? search.trim() : null;
+    return coachTypeRepository.findActiveForDropdown(s)
       .stream().map(e -> toResponse(e, null)).toList();
   }
 

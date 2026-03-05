@@ -15,7 +15,7 @@ public interface CoachTypeService {
 
   public CoachTypeResponse toggleStatus(String typeCode, boolean isActive);
 
-  public List<CoachTypeResponse> getAllForDropdown();
+  public List<CoachTypeResponse> getAllForDropdown(String search);
 
   public List<CoachTypeResponse> getAllForAdmin(String search);
 

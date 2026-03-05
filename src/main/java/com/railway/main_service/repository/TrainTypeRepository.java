@@ -36,8 +36,8 @@ SELECT t FROM TrainTypeEntity t
 WHERE t.isActive = true
 AND (
   :search IS NULL OR
-  LOWER(t.typeCode) LIKE LOWER(CONCAT(:search, '%')) OR
-  LOWER(t.typeName) LIKE LOWER(CONCAT(:search, '%'))
+  LOWER(t.typeCode) LIKE LOWER(CONCAT(CAST(:search AS string), '%')) OR
+  LOWER(t.typeName) LIKE LOWER(CONCAT(CAST(:search AS string), '%'))
 )
 ORDER BY t.typeCode ASC
 """)
