@@ -55,17 +55,20 @@ public class FareRuleController {
   @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<List<FareRuleResponse>>> getComboHistory(
     @RequestParam String trainTypeCode,
-    @RequestParam String coachTypeCode) {
+    @RequestParam String coachTypeCode,
+   @RequestParam String quotaCode
+  ) {
     return ResponseEntity.ok(ApiResponse.success(
-      fareRuleService.getComboHistory(trainTypeCode, coachTypeCode)));
+      fareRuleService.getComboHistory(trainTypeCode, coachTypeCode,quotaCode)));
   }
 
   @GetMapping(ApiConstants.GET_CURRENT_FARE_RULE)
   public ResponseEntity<ApiResponse<FareRuleResponse>> getCurrentRule(
     @RequestParam String trainTypeCode,
     @RequestParam String coachTypeCode,
+    @RequestParam String quotaCode,
     @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
     return ResponseEntity.ok(ApiResponse.success(
-      fareRuleService.getCurrentRule(trainTypeCode, coachTypeCode, date)));
+      fareRuleService.getCurrentRule(trainTypeCode, coachTypeCode, quotaCode, date)));
   }
 }

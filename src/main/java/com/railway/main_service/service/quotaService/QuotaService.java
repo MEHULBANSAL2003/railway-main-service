@@ -2,6 +2,7 @@ package com.railway.main_service.service.quotaService;
 
 import com.railway.main_service.dto.request.quota.AddQuotaRequest;
 import com.railway.main_service.dto.request.quota.UpdateQuotaRequest;
+import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.quota.QuotaResponse;
 
 import java.util.List;
@@ -17,4 +18,5 @@ public interface QuotaService {
   public List<QuotaResponse> getAllForDropdown();
 
   public List<QuotaResponse> getAllForAdmin();
+  public CascadeInfoResponse getCascadeInfo(String quotaCode);
 }

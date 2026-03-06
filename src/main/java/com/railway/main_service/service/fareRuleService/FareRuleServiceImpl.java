@@ -154,26 +154,6 @@ public class FareRuleServiceImpl implements FareRuleService {
 
     if (entity.getIsActive().equals(isActive))
       return toResponse(entity, null);
-
-    // ── Guard: deactivating the last currently-active rule for this combo ──
-    if (!isActive) {
-      boolean otherActiveExists = fareRuleRepository.existsOtherCurrentRule(
-        entity.getTrainType().getTypeCode(),
-        entity.getCoachType().getTypeCode(),
-        entity.getQuota().getQuotaCode(),
-        ruleId,
-        LocalDate.now()
-      );
-      if (!otherActiveExists) {
-        throw new BaseException(HttpStatus.CONFLICT, "LAST_ACTIVE_FARE_RULE",
-          "Cannot deactivate — this is the only active fare rule for " +
-            entity.getTrainType().getTypeCode() + " + " +
-            entity.getCoachType().getTypeCode() + " + " +
-            entity.getQuota().getQuotaCode() +
-            ". At least one active rule must exist for this combination.");
-      }
-    }
-
     entity.setIsActive(isActive);
     entity.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     return toResponse(fareRuleRepository.save(entity),
@@ -190,19 +170,21 @@ public class FareRuleServiceImpl implements FareRuleService {
   }
 
   @Override
-  public List<FareRuleResponse> getComboHistory(String trainTypeCode, String coachTypeCode) {
+  public List<FareRuleResponse> getComboHistory(String trainTypeCode, String coachTypeCode, String quotaCode) {
     return fareRuleRepository.findAllByCombo(
-        trainTypeCode.toUpperCase(), coachTypeCode.toUpperCase())
+        trainTypeCode.toUpperCase(), coachTypeCode.toUpperCase(), quotaCode.toUpperCase())
       .stream().map(e -> toResponse(e, null)).toList();
   }
 
+  // Fix getCurrentRule:
   @Override
-  public FareRuleResponse getCurrentRule(String trainTypeCode, String coachTypeCode, LocalDate date) {
+  public FareRuleResponse getCurrentRule(String trainTypeCode, String coachTypeCode, String quotaCode, LocalDate date) {
     return fareRuleRepository.findCurrentRule(
-        trainTypeCode.toUpperCase(), coachTypeCode.toUpperCase(), date)
+        trainTypeCode.toUpperCase(), coachTypeCode.toUpperCase(), quotaCode.toUpperCase(), date)
       .map(e -> toResponse(e, null))
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "FARE_RULE_NOT_FOUND",
-        "No active fare rule found for " + trainTypeCode + " + " + coachTypeCode + " on " + date));
+        "No active fare rule found for " + trainTypeCode + " + " + coachTypeCode +
+          " + " + quotaCode + " on " + date));
   }
 
   // ── Mapper ───────────────────────────────────────────────

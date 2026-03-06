@@ -4,6 +4,7 @@ import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.quota.AddQuotaRequest;
 import com.railway.main_service.dto.request.quota.UpdateQuotaRequest;
+import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.quota.QuotaResponse;
 import com.railway.main_service.service.quotaService.QuotaService;
 import jakarta.validation.Valid;
@@ -57,5 +58,13 @@ public class QuotaController {
   @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<List<QuotaResponse>>> getAllForAdmin() {
     return ResponseEntity.ok(ApiResponse.success(quotaService.getAllForAdmin()));
+  }
+
+  @GetMapping(ApiConstants.CASCADE_OPS)
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<CascadeInfoResponse>> getCascadeInfo(
+    @PathVariable String typeCode) {
+    return ResponseEntity.ok(ApiResponse.success(
+      quotaService.getCascadeInfo(typeCode)));
   }
 }

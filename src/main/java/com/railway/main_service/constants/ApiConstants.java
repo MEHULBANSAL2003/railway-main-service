@@ -68,6 +68,9 @@ public class ApiConstants {
   public static final String GET_QUOTAS_ADMIN     = "/get/all/admin";
 
 
+  public static final String CASCADE_OPS =  "/cascade-info/{typeCode}";
+
+
   private ApiConstants() {
     throw new IllegalStateException("Constants class");
   }

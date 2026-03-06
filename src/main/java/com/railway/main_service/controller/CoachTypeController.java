@@ -5,6 +5,7 @@ import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.coachType.AddCoachTypeRequest;
 import com.railway.main_service.dto.request.coachType.UpdateCoachTypeRequest;
+import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.coachType.CoachTypeResponse;
 import com.railway.main_service.service.coachTypeService.CoachTypeService;
 import jakarta.validation.Valid;
@@ -69,5 +70,13 @@ public class CoachTypeController {
     @RequestParam(required = false) String search) {
     return ResponseEntity.ok(ApiResponse.success(
       coachTypeService.getAllForAdmin(search)));
+  }
+
+  @GetMapping(ApiConstants.CASCADE_OPS)
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<CascadeInfoResponse>> getCascadeInfo(
+    @PathVariable String typeCode) {
+    return ResponseEntity.ok(ApiResponse.success(
+      coachTypeService.getCascadeInfo(typeCode)));
   }
 }

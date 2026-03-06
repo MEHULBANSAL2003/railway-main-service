@@ -4,6 +4,7 @@ import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.trainType.AddTrainTypeRequest;
 import com.railway.main_service.dto.request.trainType.UpdateTrainTypeRequest;
+import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.trainType.TrainTypeResponse;
 import com.railway.main_service.service.trainTypeService.TrainTypeService;
 import jakarta.validation.Valid;
@@ -66,5 +67,12 @@ public class TrainTypeController {
     @RequestParam(required = false) String search) {
     return ResponseEntity.ok(ApiResponse.success(
       trainTypeService.getAllForAdmin(search)));
+  }
+  @GetMapping(ApiConstants.CASCADE_OPS)
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<CascadeInfoResponse>> getCascadeInfo(
+    @PathVariable String typeCode) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainTypeService.getCascadeInfo(typeCode)));
   }
 }
