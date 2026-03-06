@@ -155,6 +155,25 @@ public class FareRuleServiceImpl implements FareRuleService {
     if (entity.getIsActive().equals(isActive))
       return toResponse(entity, null);
 
+    // ── Guard: deactivating the last currently-active rule for this combo ──
+    if (!isActive) {
+      boolean otherActiveExists = fareRuleRepository.existsOtherCurrentRule(
+        entity.getTrainType().getTypeCode(),
+        entity.getCoachType().getTypeCode(),
+        entity.getQuota().getQuotaCode(),
+        ruleId,
+        LocalDate.now()
+      );
+      if (!otherActiveExists) {
+        throw new BaseException(HttpStatus.CONFLICT, "LAST_ACTIVE_FARE_RULE",
+          "Cannot deactivate — this is the only active fare rule for " +
+            entity.getTrainType().getTypeCode() + " + " +
+            entity.getCoachType().getTypeCode() + " + " +
+            entity.getQuota().getQuotaCode() +
+            ". At least one active rule must exist for this combination.");
+      }
+    }
+
     entity.setIsActive(isActive);
     entity.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     return toResponse(fareRuleRepository.save(entity),

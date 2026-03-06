@@ -113,4 +113,19 @@ public interface FareRuleRepository extends JpaRepository<FareRuleEntity, Long> 
     @Param("coachTypeCode") String coachTypeCode,
     @Param("quotaCode") String quotaCode);
 
+  @Query("SELECT COUNT(f) > 0 FROM FareRuleEntity f " +
+    "WHERE f.trainType.typeCode = :trainCode " +
+    "AND f.coachType.typeCode = :coachCode " +
+    "AND f.quota.quotaCode = :quotaCode " +
+    "AND f.ruleId <> :excludeRuleId " +        // exclude the one being toggled
+    "AND f.isActive = true " +
+    "AND f.effectiveFrom <= :today")
+  boolean existsOtherCurrentRule(
+    @Param("trainCode")      String trainCode,
+    @Param("coachCode")      String coachCode,
+    @Param("quotaCode")      String quotaCode,
+    @Param("excludeRuleId")  Long excludeRuleId,
+    @Param("today")          LocalDate today
+  );
+
 }
