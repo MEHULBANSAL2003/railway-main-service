@@ -16,6 +16,9 @@ public class AddFareRuleRequest {
   @NotBlank(message = "Coach type code is required.")
   private String coachTypeCode;
 
+  @NotBlank(message = "Quota code is required.")
+  private String quotaCode;
+
   @NotNull(message = "Base fare per km is required.")
   @DecimalMin(value = "0.0001", message = "Base fare must be greater than 0.")
   @Digits(integer = 4, fraction = 4)
@@ -25,6 +28,11 @@ public class AddFareRuleRequest {
   @DecimalMin(value = "0.00", message = "Minimum fare cannot be negative.")
   @Digits(integer = 6, fraction = 2)
   private BigDecimal minFare;
+
+  @NotNull(message = "Tatkal charge is required. Use 0 for General quota.")
+  @DecimalMin(value = "0.00", message = "Tatkal charge cannot be negative.")
+  @Digits(integer = 4, fraction = 2)
+  private BigDecimal tatkalCharge;
 
   @NotNull(message = "Reservation charge is required.")
   @DecimalMin(value = "0.00", message = "Reservation charge cannot be negative.")

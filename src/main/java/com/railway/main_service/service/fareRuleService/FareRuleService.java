@@ -9,7 +9,7 @@ import java.util.List;
 public interface FareRuleService {
   FareRuleResponse addFareRule(AddFareRuleRequest request);
   FareRuleResponse toggleStatus(Long ruleId, boolean isActive);
-  List<FareRuleResponse> getAllForAdmin(String trainTypeCode, String coachTypeCode);
+  List<FareRuleResponse> getAllForAdmin(String trainTypeCode, String coachTypeCode, String quotaCode);
   List<FareRuleResponse> getComboHistory(String trainTypeCode, String coachTypeCode);
   FareRuleResponse getCurrentRule(String trainTypeCode, String coachTypeCode, LocalDate date);
 }

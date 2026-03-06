@@ -58,4 +58,59 @@ public interface FareRuleRepository extends JpaRepository<FareRuleEntity, Long> 
   Optional<FareRuleEntity> findOpenRule(
     @Param("trainTypeCode") String trainTypeCode,
     @Param("coachTypeCode") String coachTypeCode);
+
+
+  boolean existsByTrainType_TypeCodeAndCoachType_TypeCodeAndQuota_QuotaCodeAndEffectiveFrom(
+    String trainTypeCode, String coachTypeCode, String quotaCode, LocalDate effectiveFrom);
+
+  // Update findAllForAdmin to include quota filter:
+  @Query("SELECT f FROM FareRuleEntity f " +
+    "JOIN FETCH f.trainType tt JOIN FETCH f.coachType ct JOIN FETCH f.quota q " +
+    "WHERE (:trainTypeCode IS NULL OR tt.typeCode = CAST(:trainTypeCode AS string)) " +
+    "AND (:coachTypeCode IS NULL OR ct.typeCode = CAST(:coachTypeCode AS string)) " +
+    "AND (:quotaCode IS NULL OR q.quotaCode = CAST(:quotaCode AS string)) " +
+    "ORDER BY tt.typeCode ASC, ct.typeCode ASC, q.quotaCode ASC, f.effectiveFrom DESC")
+  List<FareRuleEntity> findAllForAdmin(
+    @Param("trainTypeCode") String trainTypeCode,
+    @Param("coachTypeCode") String coachTypeCode,
+    @Param("quotaCode") String quotaCode);
+
+  // Update findOpenRule to include quota:
+  @Query("SELECT f FROM FareRuleEntity f " +
+    "JOIN f.trainType tt JOIN f.coachType ct JOIN f.quota q " +
+    "WHERE tt.typeCode = :trainTypeCode AND ct.typeCode = :coachTypeCode " +
+    "AND q.quotaCode = :quotaCode " +
+    "AND f.isActive = true AND f.effectiveUntil IS NULL " +
+    "ORDER BY f.effectiveFrom DESC")
+  Optional<FareRuleEntity> findOpenRule(
+    @Param("trainTypeCode") String trainTypeCode,
+    @Param("coachTypeCode") String coachTypeCode,
+    @Param("quotaCode") String quotaCode);
+
+  // Update findCurrentRule to include quota:
+  @Query("SELECT f FROM FareRuleEntity f " +
+    "JOIN FETCH f.trainType tt JOIN FETCH f.coachType ct JOIN FETCH f.quota q " +
+    "WHERE tt.typeCode = :trainTypeCode AND ct.typeCode = :coachTypeCode " +
+    "AND q.quotaCode = :quotaCode " +
+    "AND f.isActive = true " +
+    "AND f.effectiveFrom <= :date " +
+    "AND (f.effectiveUntil IS NULL OR f.effectiveUntil >= :date) " +
+    "ORDER BY f.effectiveFrom DESC")
+  Optional<FareRuleEntity> findCurrentRule(
+    @Param("trainTypeCode") String trainTypeCode,
+    @Param("coachTypeCode") String coachTypeCode,
+    @Param("quotaCode") String quotaCode,
+    @Param("date") LocalDate date);
+
+  // Update findAllByCombo to include quota:
+  @Query("SELECT f FROM FareRuleEntity f " +
+    "JOIN FETCH f.trainType tt JOIN FETCH f.coachType ct JOIN FETCH f.quota q " +
+    "WHERE tt.typeCode = :trainTypeCode AND ct.typeCode = :coachTypeCode " +
+    "AND q.quotaCode = :quotaCode " +
+    "ORDER BY f.effectiveFrom DESC")
+  List<FareRuleEntity> findAllByCombo(
+    @Param("trainTypeCode") String trainTypeCode,
+    @Param("coachTypeCode") String coachTypeCode,
+    @Param("quotaCode") String quotaCode);
+
 }

@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Table(name = "fare_rules", schema = "railway_main",
   uniqueConstraints = @UniqueConstraint(
     name = "uq_fare_rule_combo",
-    columnNames = {"train_type_id", "coach_type_id", "effective_from"}
+    columnNames = {"train_type_id", "coach_type_id", "quota_id", "effective_from"}
   )
 )
 public class FareRuleEntity {
@@ -33,11 +33,19 @@ public class FareRuleEntity {
   @JoinColumn(name = "coach_type_id", nullable = false)
   private CoachTypeEntity coachType;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "quota_id", nullable = false)
+  private QuotaEntity quota;
+
   @Column(name = "base_fare_per_km", nullable = false, precision = 8, scale = 4)
   private BigDecimal baseFarePerKm;
 
   @Column(name = "min_fare", nullable = false, precision = 8, scale = 2)
   private BigDecimal minFare;
+
+  @Column(name = "tatkal_charge", nullable = false, precision = 8, scale = 2)
+  @Builder.Default
+  private BigDecimal tatkalCharge = BigDecimal.ZERO;
 
   @Column(name = "reservation_charge", nullable = false, precision = 6, scale = 2)
   @Builder.Default

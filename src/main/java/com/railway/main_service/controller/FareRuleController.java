@@ -44,9 +44,11 @@ public class FareRuleController {
   @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<List<FareRuleResponse>>> getAllForAdmin(
     @RequestParam(required = false) String trainTypeCode,
-    @RequestParam(required = false) String coachTypeCode) {
+    @RequestParam(required = false) String coachTypeCode,
+    @RequestParam(required = false) String quotaCode
+  ) {
     return ResponseEntity.ok(ApiResponse.success(
-      fareRuleService.getAllForAdmin(trainTypeCode, coachTypeCode)));
+      fareRuleService.getAllForAdmin(trainTypeCode, coachTypeCode, quotaCode)));
   }
 
   @GetMapping(ApiConstants.GET_FARE_RULE_HISTORY)

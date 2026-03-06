@@ -15,6 +15,8 @@ public class FareRuleResponse {
   private Long ruleId;
   private String trainTypeCode;
   private String trainTypeName;
+  private String quotaCode;
+  private String quotaName;
   private Boolean isSuperfast;
   private String coachTypeCode;
   private String coachTypeName;
@@ -28,6 +30,7 @@ public class FareRuleResponse {
   private LocalDate effectiveUntil;
   private Boolean isActive;
   private Boolean isCurrent;
+  private BigDecimal tatkalCharge;
   private Long createdBy;
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;

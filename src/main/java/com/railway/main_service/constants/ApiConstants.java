@@ -12,6 +12,7 @@ public class ApiConstants {
   public static final String TRAIN_TYPES = API_BASE + "/train-types";
   public static final String COACH_TYPES = API_BASE + "/coach-types";
   public static final String FARE_RULES = API_BASE + "/fare-rules";
+  public static final String QUOTAS = API_BASE + "/quotas";
 
   //stations
   public static final String ADD_NEW_STATION = "/admin/add/new/station";
@@ -57,6 +58,14 @@ public class ApiConstants {
   public static final String GET_FARE_RULES_ADMIN   = "/all/admin";
   public static final String GET_FARE_RULE_HISTORY  = "/get/history";
   public static final String GET_CURRENT_FARE_RULE  = "/get/current";
+
+  //quotas
+
+  public static final String ADD_QUOTA            = "/add";
+  public static final String UPDATE_QUOTA         = "/update/{quotaCode}";
+  public static final String QUOTA_STATUS         = "/change/status/{quotaCode}";
+  public static final String GET_QUOTAS_DROPDOWN  = "/get/all";
+  public static final String GET_QUOTAS_ADMIN     = "/get/all/admin";
 
 
   private ApiConstants() {
