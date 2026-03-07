@@ -14,6 +14,7 @@ public class ApiConstants {
   public static final String FARE_RULES = API_BASE + "/fare-rules";
   public static final String QUOTAS = API_BASE + "/quotas";
   public static final String TRAINS              = API_BASE + "/trains";
+  public static final String TRAIN_COACHES        = API_BASE + "/train/coaches";
 
   //stations
   public static final String ADD_NEW_STATION = "/admin/add/new/station";
@@ -84,6 +85,12 @@ public class ApiConstants {
   public static final String TRAIN_UPLOAD          = "/upload/excel";
   public static final String TRAIN_UPLOAD_TEMPLATE = "/upload/template";
 
+
+  //train coaches
+  public static final String GET_TRAIN_COACHES      = "/get/by/train/{trainNumber}";
+  public static final String TRAIN_COACH_ADD    = "/add/new/{trainNumber}";
+  public static final String TRAIN_COACH_UPDATE = "update/{trainNumber}/{coachId}";
+  public static final String TRAIN_COACH_STATUS = "/change/status/{trainNumber}/{coachId}";
 
   private ApiConstants() {
     throw new IllegalStateException("Constants class");
