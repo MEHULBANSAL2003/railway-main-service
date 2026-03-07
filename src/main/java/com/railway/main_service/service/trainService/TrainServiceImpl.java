@@ -57,9 +57,7 @@ public class TrainServiceImpl implements TrainService {
       throw new BaseException(HttpStatus.CONFLICT, "TRAIN_NUMBER_EXISTS",
         "Train number '" + trainNumber + "' already exists.");
 
-    if (trainRepository.existsByTrainName(trainName))
-      throw new BaseException(HttpStatus.CONFLICT, "TRAIN_NAME_EXISTS",
-        "Train with name '" + trainName + "' already exists.");
+
 
     TrainTypeEntity trainType = trainTypeRepository.findByTypeCode(typeCode)
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "TRAIN_TYPE_NOT_FOUND",
@@ -90,12 +88,8 @@ public class TrainServiceImpl implements TrainService {
 
     TrainEntity entity = findByNumber(trainNumber);
 
-    if (request.getTrainName() != null && !request.getTrainName().isBlank()) {
-      String newName = request.getTrainName().trim();
-      if (trainRepository.existsByTrainNameAndTrainIdNot(newName, entity.getTrainId()))
-        throw new BaseException(HttpStatus.CONFLICT, "TRAIN_NAME_EXISTS",
-          "Another train with name '" + newName + "' already exists.");
-      entity.setTrainName(newName);
+    if(request.getTrainName()!= null && !request.getTrainName().isBlank()){
+      entity.setTrainName(request.getTrainName());
     }
 
     if (request.getZoneCode() != null && !request.getZoneCode().isBlank()) {
@@ -301,14 +295,6 @@ public class TrainServiceImpl implements TrainService {
           continue;
         }
 
-        if (trainRepository.existsByTrainName(trainName)) {
-          duplicateCount++;
-          errors.add(BulkUploadResponse.RowError.builder()
-            .rowNumber(displayRow).trainNumber(trainNumber)
-            .trainName(trainName)
-            .reason("Train name '" + trainName + "' already exists. Skipped.").build());
-          continue;
-        }
 
         // ── Reference data validation ─────────────────────
         Optional<TrainTypeEntity> typeOpt = trainTypeRepository.findByTypeCode(trainTypeCode);

@@ -12,10 +12,6 @@ import java.time.LocalDateTime;
     @UniqueConstraint(
       name = "uk_train_number",
       columnNames = "train_number"
-    ),
-    @UniqueConstraint(
-      name = "uk_train_name",
-      columnNames = "train_name"
     )
   }
 )

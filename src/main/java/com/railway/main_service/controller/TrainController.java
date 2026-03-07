@@ -37,7 +37,7 @@ public class TrainController {
     return ResponseEntity.ok(ApiResponse.success(trainService.addTrain(request)));
   }
 
-  @PatchMapping(ApiConstants.UPDATE_TRAIN)
+  @PostMapping(ApiConstants.UPDATE_TRAIN)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<TrainResponse>> updateTrain(
     @PathVariable String trainNumber,
@@ -45,7 +45,7 @@ public class TrainController {
     return ResponseEntity.ok(ApiResponse.success(trainService.updateTrain(trainNumber, request)));
   }
 
-  @PatchMapping(ApiConstants.TRAIN_STATUS)
+  @PostMapping(ApiConstants.TRAIN_STATUS)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<TrainResponse>> toggleStatus(
     @PathVariable String trainNumber,
