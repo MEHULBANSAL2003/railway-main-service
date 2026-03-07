@@ -4,6 +4,7 @@ import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.trainCoach.AddTrainCoachRequest;
 import com.railway.main_service.dto.request.trainCoach.UpdateTrainCoachRequest;
+import com.railway.main_service.dto.response.trainCoach.CoachTypeDropdownResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCoachResponse;
 import com.railway.main_service.service.trainCoachService.TrainCoachService;
 import jakarta.validation.Valid;
@@ -60,5 +61,13 @@ public class TrainCoachController {
     @RequestParam boolean isActive) {
     return ResponseEntity.ok(ApiResponse.success(
       trainCoachService.toggleStatus(trainNumber, coachId, isActive)));
+  }
+
+  @GetMapping(ApiConstants.TRAIN_COACH_AVAILABLE_TYPES)
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<List<CoachTypeDropdownResponse>>> getAvailableCoachTypes(
+    @PathVariable String trainNumber) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainCoachService.getAvailableCoachTypes(trainNumber)));
   }
 }

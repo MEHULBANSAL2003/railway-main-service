@@ -3,8 +3,10 @@ package com.railway.main_service.controller;
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.trainType.AddTrainTypeRequest;
+import com.railway.main_service.dto.request.trainType.SetAllowedCoachesRequest;
 import com.railway.main_service.dto.request.trainType.UpdateTrainTypeRequest;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
+import com.railway.main_service.dto.response.trainType.AllowedCoachResponse;
 import com.railway.main_service.dto.response.trainType.TrainTypeResponse;
 import com.railway.main_service.service.trainTypeService.TrainTypeService;
 import jakarta.validation.Valid;
@@ -74,5 +76,24 @@ public class TrainTypeController {
     @PathVariable String typeCode) {
     return ResponseEntity.ok(ApiResponse.success(
       trainTypeService.getCascadeInfo(typeCode)));
+  }
+
+  @GetMapping(ApiConstants.TRAIN_TYPE_ALLOWED_COACHES)
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<List<AllowedCoachResponse>>> getAllowedCoaches(
+    @PathVariable String typeCode) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainTypeService.getAllowedCoaches(typeCode)));
+  }
+
+  // PUT  /api/main/train-types/{typeCode}/allowed-coaches
+// Full replace — send complete desired list
+  @PostMapping(ApiConstants.TRAIN_TYPE_ALLOWED_COACHES)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<List<AllowedCoachResponse>>> setAllowedCoaches(
+    @PathVariable String typeCode,
+    @Valid @RequestBody SetAllowedCoachesRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainTypeService.setAllowedCoaches(typeCode, request)));
   }
 }

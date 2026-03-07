@@ -42,4 +42,6 @@ ORDER BY c.typeCode ASC
     "OR LOWER(c.typeName) LIKE LOWER(CONCAT(CAST(:search AS string), '%'))) " +
     "ORDER BY c.typeCode ASC")
   List<CoachTypeEntity> findAllForAdmin(@Param("search") String search);
+
+  List<CoachTypeEntity> findAllByTypeIdInAndIsActiveTrue(List<Long> typeIds);
 }

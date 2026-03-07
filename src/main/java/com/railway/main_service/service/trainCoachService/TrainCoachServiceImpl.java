@@ -5,6 +5,7 @@ import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
 import com.railway.main_service.dto.request.trainCoach.AddTrainCoachRequest;
 import com.railway.main_service.dto.request.trainCoach.UpdateTrainCoachRequest;
+import com.railway.main_service.dto.response.trainCoach.CoachTypeDropdownResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCoachResponse;
 import com.railway.main_service.entity.CoachTypeEntity;
 import com.railway.main_service.entity.TrainCoachEntity;
@@ -12,12 +13,14 @@ import com.railway.main_service.entity.TrainEntity;
 import com.railway.main_service.repository.CoachTypeRepository;
 import com.railway.main_service.repository.TrainCoachRepository;
 import com.railway.main_service.repository.TrainRepository;
+import com.railway.main_service.repository.TrainTypeCoachRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service @Loggable @Slf4j @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class TrainCoachServiceImpl implements TrainCoachService {
   private final TrainCoachRepository trainCoachRepository;
   private final TrainRepository      trainRepository;
   private final CoachTypeRepository  coachTypeRepository;
+  private final TrainTypeCoachRepository trainTypeCoachRepository;
 
   // ── Add ───────────────────────────────────────────────────────────────────
   @Override
@@ -184,5 +188,42 @@ public class TrainCoachServiceImpl implements TrainCoachService {
       .updatedAt(e.getUpdatedAt())
       .message(message)
       .build();
+  }
+
+  @Override
+  public List<CoachTypeDropdownResponse> getAvailableCoachTypes(String trainNumber) {
+    TrainEntity train = findTrainByNumber(trainNumber);
+
+    // Step 1 — which coach types are allowed for this train's type?
+    List<Long> allowedIds = trainTypeCoachRepository
+      .findAllowedCoachTypeIds(train.getTrainType().getTypeId());
+
+    if (allowedIds.isEmpty()) {
+      // No allowed coaches configured for this train type yet
+      // Return empty — forces admin to configure train type first
+      return List.of();
+    }
+
+    // Step 2 — which of those are already added to this train?
+    List<Long> usedIds = trainCoachRepository
+      .findUsedCoachTypeIdsByTrainId(train.getTrainId());
+
+    // Step 3 — allowed AND active AND not already added
+    List<Long> availableIds = allowedIds.stream()
+      .filter(id -> !usedIds.contains(id))
+      .toList();
+
+    if (availableIds.isEmpty()) return List.of(); // all allowed types already added
+
+    return coachTypeRepository.findAllByTypeIdInAndIsActiveTrue(availableIds).stream()
+      .sorted(Comparator.comparing(CoachTypeEntity::getTypeCode))
+      .map(ct -> CoachTypeDropdownResponse.builder()
+        .typeId(ct.getTypeId())
+        .typeCode(ct.getTypeCode())
+        .typeName(ct.getTypeName())
+        .totalSeats(ct.getTotalSeats())
+        .isAc(ct.getIsAc())
+        .build())
+      .toList();
   }
 }

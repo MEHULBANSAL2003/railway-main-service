@@ -46,6 +46,7 @@ public class ApiConstants {
   public static final String GET_TRAIN_TYPES_ADMIN = "/get/all/admin";
  public static final String UPDATE_TRAIN_TYPE = "/update/details/{typeCode}";
  public static final String CHANGE_STATUS = "/change/status/{typeCode}";
+  public static final String TRAIN_TYPE_ALLOWED_COACHES = "/allowed-coaches/{typeCode}";
 
  //coach types
   public static final String ADD_COACH_TYPE = "/add/new";
@@ -91,6 +92,7 @@ public class ApiConstants {
   public static final String TRAIN_COACH_ADD    = "/add/new/{trainNumber}";
   public static final String TRAIN_COACH_UPDATE = "update/{trainNumber}/{coachId}";
   public static final String TRAIN_COACH_STATUS = "/change/status/{trainNumber}/{coachId}";
+  public static final String TRAIN_COACH_AVAILABLE_TYPES = "/available-types/{trainNumber}";
 
   private ApiConstants() {
     throw new IllegalStateException("Constants class");

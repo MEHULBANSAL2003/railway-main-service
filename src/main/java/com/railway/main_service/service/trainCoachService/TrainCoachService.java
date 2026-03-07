@@ -2,6 +2,7 @@ package com.railway.main_service.service.trainCoachService;
 
 import com.railway.main_service.dto.request.trainCoach.AddTrainCoachRequest;
 import com.railway.main_service.dto.request.trainCoach.UpdateTrainCoachRequest;
+import com.railway.main_service.dto.response.trainCoach.CoachTypeDropdownResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCoachResponse;
 import java.util.List;
 
@@ -18,4 +19,6 @@ public interface TrainCoachService {
 
   // All coaches for a train (sub-page load)
   List<TrainCoachResponse> getAllByTrain(String trainNumber);
+
+  List<CoachTypeDropdownResponse> getAvailableCoachTypes(String trainNumber);
 }

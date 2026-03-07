@@ -38,4 +38,7 @@ public interface TrainCoachRepository extends JpaRepository<TrainCoachEntity, Lo
 
   // Used when deactivating a coachType — cascade count
   int countByCoachType_TypeCodeAndIsActiveTrue(String typeCode);
+
+  @Query("SELECT tc.coachType.typeId FROM TrainCoachEntity tc WHERE tc.train.trainId = :trainId")
+   List<Long> findUsedCoachTypeIdsByTrainId(@Param("trainId") Long trainId);
 }
