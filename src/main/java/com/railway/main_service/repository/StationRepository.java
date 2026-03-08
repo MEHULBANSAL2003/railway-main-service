@@ -66,4 +66,19 @@ public interface StationRepository
     countQuery = "SELECT COUNT(s) FROM StationEntity s WHERE s.isPermanentlyDeleted = true"
   )
   Page<StationEntity> findAllPermanentlyDeletedWithDetails(Pageable pageable);
+
+
+  @Query("SELECT s FROM StationEntity s " +
+    "JOIN FETCH s.city c " +
+    "JOIN FETCH c.state st " +
+    "JOIN FETCH s.zone z " +
+    "WHERE s.isActive = true " +
+    "AND s.isPermanentlyDeleted = false " +
+    "AND (:search IS NULL OR :search = '' " +
+    "  OR LOWER(s.stationCode) LIKE LOWER(CONCAT('%', :search, '%')) " +
+    "  OR LOWER(s.stationName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+    "ORDER BY s.stationCode ASC")
+  List<StationEntity> findActiveForDropdown(
+    @Param("search") String search
+  );
 }

@@ -15,11 +15,14 @@ public class ApiConstants {
   public static final String QUOTAS = API_BASE + "/quotas";
   public static final String TRAINS              = API_BASE + "/trains";
   public static final String TRAIN_COACHES        = API_BASE + "/train/coaches";
+  public static final String TRAIN_STOPS        = API_BASE + "/trains/{trainNumber}/stops";
+
 
   //stations
   public static final String ADD_NEW_STATION = "/admin/add/new/station";
   public static final String UPLOAD_STATIONS_EXCEL = "/upload/excel";
   public static final String GET_STATIONS = "/get/all/list";
+  public static final String GET_STATIONS_DROPDOWN = "/get/all/dropdown";
   public static final String SET_ACTIVE_INACTIVE = "/set/active/inactive/{stationCode}";
   public static final String UPDATE_STATION_DETAILS = "/update/details/{stationCode}";
   public static final String DELETE_STATION = "/delete/{stationCode}";
@@ -94,6 +97,12 @@ public class ApiConstants {
   public static final String TRAIN_COACH_UPDATE = "update/{trainNumber}/{coachId}";
   public static final String TRAIN_COACH_STATUS = "/change/status/{trainNumber}/{coachId}";
   public static final String TRAIN_COACH_AVAILABLE_TYPES = "/available-types/{trainNumber}";
+
+  //train stops
+  public static final String ADD_NEW_TRAIN_STOP = "/add/new";
+  public static final String UPDATE_TRAIN_STOP = "/update/{stopId}";
+  public static final String DELETE_TRAIN_STOP = "/delete/{stopId}";
+
 
   private ApiConstants() {
     throw new IllegalStateException("Constants class");

@@ -22,6 +22,9 @@ public interface StationService {
   PageResponseDto<StationResponse> getAllStations(StationFilterRequest pageRequest);
   PageResponseDto<StationResponse> getAllPermanentlyDeletedStations(StationFilterRequest pageRequest);
 
+  List<StationResponse> getAllStationsForDropdown(String searchTerm);
+
+
   ExcelUploadResult uploadStationsExcel(MultipartFile file);
 
 

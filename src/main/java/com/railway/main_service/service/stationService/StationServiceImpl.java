@@ -195,6 +195,17 @@ public class StationServiceImpl implements StationService{
     return PaginationUtils.toPageResponse(page, StationMapper::toDto);
   }
 
+  @Override
+  @Transactional(readOnly = true)
+  public List<StationResponse> getAllStationsForDropdown(String searchTerm) {
+    String search = (searchTerm == null || searchTerm.isBlank()) ? null : searchTerm.trim();
+    List<StationEntity> stations = stationRepository.findActiveForDropdown(search);
+    return stations.stream()
+      .map(StationMapper::toDto)
+      .collect(Collectors.toList());
+  }
+
+
   private boolean hasValue(String s) {
     return s != null && !s.isBlank();
   }

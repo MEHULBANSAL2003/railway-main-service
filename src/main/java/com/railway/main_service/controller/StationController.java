@@ -58,6 +58,12 @@ public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStati
   PageResponseDto<StationResponse> response = stationService.getAllStations(filter);
   return ResponseEntity.ok(ApiResponse.success(response));
 }
+  @GetMapping(ApiConstants.GET_STATIONS_DROPDOWN)
+  public ResponseEntity<ApiResponse<List<StationResponse>>> getAllStationsForDropdown(
+    @RequestParam(value = "searchTerm", required = false) String searchTerm) {
+    List<StationResponse> response = stationService.getAllStationsForDropdown(searchTerm);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
 
   @PostMapping(ApiConstants.UPLOAD_STATIONS_EXCEL)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
