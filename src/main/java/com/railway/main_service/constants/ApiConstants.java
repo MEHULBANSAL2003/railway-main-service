@@ -16,6 +16,7 @@ public class ApiConstants {
   public static final String TRAINS              = API_BASE + "/trains";
   public static final String TRAIN_COACHES        = API_BASE + "/train/coaches";
   public static final String TRAIN_STOPS        = API_BASE + "/trains/{trainNumber}/stops";
+  public static final String TRAIN_SCHEDULE        = API_BASE + "/trains/{trainNumber}/schedule";
 
 
   //stations
