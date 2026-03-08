@@ -357,6 +357,15 @@ public class TrainServiceImpl implements TrainService {
       .build();
   }
 
+  @Override
+  public TrainResponse getTrainDetails(String trainNumber) {
+    TrainEntity train = trainRepository
+      .findByTrainNumberWithDetails(trainNumber.trim())
+      .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "TRAIN_NOT_FOUND",
+        "Train not found: " + trainNumber));
+    return toResponse(train, null);
+  }
+
   // ── Excel Template ────────────────────────────────────────────────────────
   @Override
   public byte[] getExcelTemplate() {

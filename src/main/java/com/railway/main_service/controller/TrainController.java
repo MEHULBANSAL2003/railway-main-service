@@ -111,4 +111,12 @@ public class TrainController {
       .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
       .body(template);
   }
+
+  @GetMapping(ApiConstants.GET_TRAIN_DETAILS_BY_NUMBER)
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<TrainResponse>> getTrainDetails(
+    @PathVariable String trainNumber
+  ){
+    return ResponseEntity.ok(ApiResponse.success(trainService.getTrainDetails(trainNumber)));
+  }
 }

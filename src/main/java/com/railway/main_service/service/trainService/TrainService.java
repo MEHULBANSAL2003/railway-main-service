@@ -43,6 +43,8 @@ public interface TrainService {
   // Excel bulk upload
   BulkUploadResponse uploadFromExcel(MultipartFile file);
 
+  TrainResponse getTrainDetails(String trainNumber);
+
   // Download blank Excel template
   byte[] getExcelTemplate();
 }

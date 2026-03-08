@@ -77,4 +77,10 @@ public interface TrainRepository extends JpaRepository<TrainEntity, Long> {
     "JOIN t.zone z " +
     "WHERE z.code = :zoneCode AND t.isActive = true")
   int countActiveTrainsByZoneCode(@Param("zoneCode") String zoneCode);
+
+  @Query("SELECT t FROM TrainEntity t " +
+    "JOIN FETCH t.trainType " +
+    "JOIN FETCH t.zone " +
+    "WHERE t.trainNumber = :trainNumber")
+  Optional<TrainEntity> findByTrainNumberWithDetails(@Param("trainNumber") String trainNumber);
 }

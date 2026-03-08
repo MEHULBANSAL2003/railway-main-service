@@ -85,6 +85,7 @@ public class ApiConstants {
   public static final String TRAIN_RETURN_INFO = "/return/info/{trainNumber}";
   public static final String TRAIN_UPLOAD          = "/upload/excel";
   public static final String TRAIN_UPLOAD_TEMPLATE = "/upload/template";
+  public static final String GET_TRAIN_DETAILS_BY_NUMBER = "/get/by/number/{trainNumber}";
 
 
   //train coaches
