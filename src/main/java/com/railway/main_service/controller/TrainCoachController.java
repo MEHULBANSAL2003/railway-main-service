@@ -42,7 +42,7 @@ public class TrainCoachController {
   }
 
   // PATCH /api/main/trains/{trainNumber}/coaches/{coachId}
-  @PatchMapping(ApiConstants.TRAIN_COACH_UPDATE)
+  @PostMapping(ApiConstants.TRAIN_COACH_UPDATE)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<TrainCoachResponse>> updateCoach(
     @PathVariable String trainNumber,
@@ -53,7 +53,7 @@ public class TrainCoachController {
   }
 
   // PATCH /api/main/trains/{trainNumber}/coaches/{coachId}/status
-  @PatchMapping(ApiConstants.TRAIN_COACH_STATUS)
+  @PostMapping(ApiConstants.TRAIN_COACH_STATUS)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<TrainCoachResponse>> toggleStatus(
     @PathVariable String trainNumber,
