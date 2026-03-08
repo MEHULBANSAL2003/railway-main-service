@@ -15,6 +15,7 @@ public class ApiConstants {
   public static final String QUOTAS = API_BASE + "/quotas";
   public static final String TRAINS              = API_BASE + "/trains";
   public static final String TRAIN_COACHES        = API_BASE + "/train/coaches";
+  public static final String ROUTES            =  API_BASE +  "/train/routes";
 
   //stations
   public static final String ADD_NEW_STATION = "/admin/add/new/station";
@@ -93,6 +94,19 @@ public class ApiConstants {
   public static final String TRAIN_COACH_UPDATE = "update/{trainNumber}/{coachId}";
   public static final String TRAIN_COACH_STATUS = "/change/status/{trainNumber}/{coachId}";
   public static final String TRAIN_COACH_AVAILABLE_TYPES = "/available-types/{trainNumber}";
+
+
+  //routes
+  public static final String ROUTES_ADMIN      = "/admin";
+  public static final String ROUTES_DROPDOWN   = "/dropdown";
+  public static final String ROUTE_ADD         = "/add";
+  public static final String ROUTE_BY_CODE     = "/{routeCode}";
+  public static final String ROUTE_STATUS      = "/change/status/{routeCode}";
+  public static final String ROUTE_CASCADE_INFO= "/cascade-info/{routeCode}";
+  public static final String ROUTE_STOPS       = "/stops/{routeCode}";
+  public static final String ROUTE_STOP_ADD    = "/stops/add/{routeCode}";
+  public static final String ROUTE_STOP_UPDATE = "/stops/update/{routeCode}/{stopId}";
+
 
   private ApiConstants() {
     throw new IllegalStateException("Constants class");

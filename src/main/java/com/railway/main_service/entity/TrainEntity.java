@@ -53,6 +53,13 @@ public class TrainEntity {
   )
   private ZoneEntity zone;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(
+    name       = "route_id",
+    foreignKey = @ForeignKey(name = "fk_train_route")
+  )
+  private RouteEntity route;
+
   // Physical feature — does this train have onboard food service
   @Column(name = "pantry_car", nullable = false)
   @Builder.Default
