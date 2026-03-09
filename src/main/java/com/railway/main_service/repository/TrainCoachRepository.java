@@ -41,4 +41,5 @@ public interface TrainCoachRepository extends JpaRepository<TrainCoachEntity, Lo
 
   @Query("SELECT tc.coachType.typeId FROM TrainCoachEntity tc WHERE tc.train.trainId = :trainId")
    List<Long> findUsedCoachTypeIdsByTrainId(@Param("trainId") Long trainId);
+
 }

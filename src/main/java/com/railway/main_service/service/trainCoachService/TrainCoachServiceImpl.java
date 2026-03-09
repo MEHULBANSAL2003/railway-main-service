@@ -7,6 +7,7 @@ import com.railway.main_service.dto.request.trainCoach.AddTrainCoachRequest;
 import com.railway.main_service.dto.request.trainCoach.UpdateTrainCoachRequest;
 import com.railway.main_service.dto.response.trainCoach.CoachTypeDropdownResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCoachResponse;
+import com.railway.main_service.dto.response.trainCoach.TrainCopyCoachesResponse;
 import com.railway.main_service.entity.CoachTypeEntity;
 import com.railway.main_service.entity.TrainCoachEntity;
 import com.railway.main_service.entity.TrainEntity;
@@ -225,5 +226,74 @@ public class TrainCoachServiceImpl implements TrainCoachService {
         .isAc(ct.getIsAc())
         .build())
       .toList();
+  }
+
+  // ── Add this method to TrainCoachServiceImpl ──────────────────────────────────
+
+  @Override
+  @Transactional
+  public TrainCopyCoachesResponse copyCoaches(String sourceTrainNumber,
+                                              String targetTrainNumber) {
+
+    // ── 1. Cannot copy to self ────────────────────────────────────────────────
+    if (sourceTrainNumber.trim().equalsIgnoreCase(targetTrainNumber.trim())) {
+      throw new BaseException(HttpStatus.BAD_REQUEST, "COPY_SAME_TRAIN",
+        "Source and target train cannot be the same.");
+    }
+
+    // ── 2. Validate both trains exist and are active ──────────────────────────
+    TrainEntity source = findActiveTrain(sourceTrainNumber);
+    TrainEntity target = findActiveTrain(targetTrainNumber);
+
+    // ── 3. Source must have coaches to copy ───────────────────────────────────
+    List<TrainCoachEntity> sourceCoaches =
+      trainCoachRepository.findAllByTrainId(source.getTrainId());
+
+    if (sourceCoaches.isEmpty()) {
+      throw new BaseException(HttpStatus.BAD_REQUEST, "SOURCE_HAS_NO_COACHES",
+        "Train " + sourceTrainNumber + " has no coaches configured. Nothing to copy.");
+    }
+
+    // ── 4. Target must have NO coaches (bookings may exist) ───────────────────
+    int targetCoachCount = trainCoachRepository.countByTrain_TrainId(target.getTrainId());
+    if (targetCoachCount > 0) {
+      throw new BaseException(HttpStatus.CONFLICT, "TARGET_HAS_COACHES",
+        "Train " + targetTrainNumber + " already has " + targetCoachCount +
+          " coach type(s) configured. Cannot overwrite — bookings may already exist.");
+    }
+
+    // ── 5. Copy each coach row ─────────────────────────────────────────────────
+    Long adminId = SecurityUtils.getCurrentAdminId();
+
+    List<TrainCoachEntity> copied = sourceCoaches.stream()
+      .map(src -> TrainCoachEntity.builder()
+        .train(target)
+        .coachType(src.getCoachType())   // same coach type entity reference
+        .coachCount(src.getCoachCount())
+        .tatkalSeats(src.getTatkalSeats())
+        .racSeats(src.getRacSeats())
+        .waitlistLimit(src.getWaitlistLimit())
+        .isActive(src.getIsActive())
+        .createdBy(adminId)
+        .build())
+      .toList();
+
+    List<TrainCoachEntity> saved = trainCoachRepository.saveAll(copied);
+
+    log.info("Copied {} coach types from train {} to train {}",
+      saved.size(), sourceTrainNumber, targetTrainNumber);
+
+    List<TrainCoachResponse> responses = saved.stream()
+      .map(e -> toResponse(e, null))
+      .toList();
+
+    return TrainCopyCoachesResponse.builder()
+      .sourceTrainNumber(sourceTrainNumber)
+      .targetTrainNumber(targetTrainNumber)
+      .copiedCount(saved.size())
+      .coaches(responses)
+      .message("Successfully copied " + saved.size() + " coach type(s) from train " +
+        sourceTrainNumber + " to train " + targetTrainNumber + ".")
+      .build();
   }
 }

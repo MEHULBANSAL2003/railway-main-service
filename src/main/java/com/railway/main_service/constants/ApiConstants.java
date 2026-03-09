@@ -98,6 +98,7 @@ public class ApiConstants {
   public static final String TRAIN_COACH_UPDATE = "update/{trainNumber}/{coachId}";
   public static final String TRAIN_COACH_STATUS = "/change/status/{trainNumber}/{coachId}";
   public static final String TRAIN_COACH_AVAILABLE_TYPES = "/available-types/{trainNumber}";
+  public static final String TRAIN_COACH_COPY_COACHES = "/{trainNumber}/coaches/copy";
 
   //train stops
   public static final String ADD_NEW_TRAIN_STOP = "/add/new";

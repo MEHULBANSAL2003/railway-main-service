@@ -4,6 +4,8 @@ import com.railway.main_service.dto.request.trainCoach.AddTrainCoachRequest;
 import com.railway.main_service.dto.request.trainCoach.UpdateTrainCoachRequest;
 import com.railway.main_service.dto.response.trainCoach.CoachTypeDropdownResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCoachResponse;
+import com.railway.main_service.dto.response.trainCoach.TrainCopyCoachesResponse;
+
 import java.util.List;
 
 public interface TrainCoachService {
@@ -21,4 +23,6 @@ public interface TrainCoachService {
   List<TrainCoachResponse> getAllByTrain(String trainNumber);
 
   List<CoachTypeDropdownResponse> getAvailableCoachTypes(String trainNumber);
+
+  TrainCopyCoachesResponse copyCoaches(String sourceTrainNumber, String targetTrainNumber);
 }

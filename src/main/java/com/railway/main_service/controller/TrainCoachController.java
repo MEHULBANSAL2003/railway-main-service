@@ -3,9 +3,11 @@ package com.railway.main_service.controller;
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.trainCoach.AddTrainCoachRequest;
+import com.railway.main_service.dto.request.trainCoach.CopyCoachesRequest;
 import com.railway.main_service.dto.request.trainCoach.UpdateTrainCoachRequest;
 import com.railway.main_service.dto.response.trainCoach.CoachTypeDropdownResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCoachResponse;
+import com.railway.main_service.dto.response.trainCoach.TrainCopyCoachesResponse;
 import com.railway.main_service.service.trainCoachService.TrainCoachService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -69,5 +71,14 @@ public class TrainCoachController {
     @PathVariable String trainNumber) {
     return ResponseEntity.ok(ApiResponse.success(
       trainCoachService.getAvailableCoachTypes(trainNumber)));
+  }
+
+  @PostMapping(ApiConstants.TRAIN_COACH_COPY_COACHES)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<TrainCopyCoachesResponse>> copyCoaches(
+    @PathVariable String trainNumber,
+    @Valid @RequestBody CopyCoachesRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainCoachService.copyCoaches(trainNumber, request.getTargetTrainNumber())));
   }
 }
