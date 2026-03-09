@@ -4,7 +4,9 @@ import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
 import com.railway.main_service.dto.request.trainStop.AddTrainStopRequest;
+import com.railway.main_service.dto.request.trainStop.BulkAddTrainStopRequest;
 import com.railway.main_service.dto.request.trainStop.UpdateTrainStopRequest;
+import com.railway.main_service.dto.response.trainStop.CopyStopsPreviewResponse;
 import com.railway.main_service.dto.response.trainStop.TrainStopResponse;
 import com.railway.main_service.entity.StationEntity;
 import com.railway.main_service.entity.TrainEntity;
@@ -279,4 +281,162 @@ public class TrainStopServiceImpl implements TrainStopService {
       .message(message)
       .build();
   }
+
+  @Override
+  @Transactional
+  public List<TrainStopResponse> bulkAddStops(String trainNumber,
+                                              BulkAddTrainStopRequest request) {
+    TrainEntity train = findTrain(trainNumber);
+    Long tid = train.getTrainId();
+
+    // Block if route already fully defined (source + dest exist)
+    boolean hasSource = trainStopRepository.findSourceStop(tid).isPresent();
+    boolean hasDest   = trainStopRepository.findDestinationStop(tid).isPresent();
+    if (hasSource && hasDest) {
+      throw new BaseException(HttpStatus.BAD_REQUEST, "ROUTE_ALREADY_DEFINED",
+        "Train " + trainNumber + " already has a fully defined route (source + destination). " +
+          "Use 'Add Stop' to insert individual intermediate stops.");
+    }
+
+    List<AddTrainStopRequest> stops = request.getStops();
+
+    // Validate list-level rules
+    validateBulkStops(stops, trainNumber);
+
+    // Save each using existing addStop logic (reuse all validations)
+    List<TrainStopResponse> saved = new ArrayList<>();
+    for (AddTrainStopRequest stopReq : stops) {
+      saved.add(addStop(trainNumber, stopReq));
+    }
+
+    log.info("Bulk added {} stops to train {}", saved.size(), trainNumber);
+    return saved;
+  }
+
+  // ── Copy Preview ──────────────────────────────────────────────────────────
+  @Override
+  @Transactional(readOnly = true)
+  public CopyStopsPreviewResponse getCopyPreview(String sourceTrainNumber,
+                                                 String targetTrainNumber) {
+    if (sourceTrainNumber.equalsIgnoreCase(targetTrainNumber)) {
+      throw new BaseException(HttpStatus.BAD_REQUEST, "COPY_SAME_TRAIN",
+        "Source and target train cannot be the same.");
+    }
+
+    TrainEntity source = findTrain(sourceTrainNumber);
+    TrainEntity target = findTrain(targetTrainNumber);
+
+    // Source must have stops to copy
+    List<TrainStopEntity> sourceStops =
+      trainStopRepository.findAllByTrainId(source.getTrainId());
+    if (sourceStops.isEmpty()) {
+      throw new BaseException(HttpStatus.BAD_REQUEST, "SOURCE_HAS_NO_STOPS",
+        "Train " + sourceTrainNumber + " has no stops configured. Nothing to copy.");
+    }
+
+    // Target must have NO stops
+    int targetStopCount = trainStopRepository.countByTrain_TrainId(target.getTrainId());
+    if (targetStopCount > 0) {
+      throw new BaseException(HttpStatus.CONFLICT, "TARGET_HAS_STOPS",
+        "Train " + targetTrainNumber + " already has " + targetStopCount +
+          " stop(s). Cannot overwrite — bookings may already exist.");
+    }
+
+    // Reverse the stops
+    // Original:  DEL(0) → AGR(200) → BOM(1400)
+    // Reversed:  BOM(0) → AGR(1200) → DEL(1400)
+    // Formula:   reversed_km = totalKm - original_km
+    int totalKm = sourceStops.get(sourceStops.size() - 1).getKmFromSource();
+    int n       = sourceStops.size();
+
+    List<CopyStopsPreviewResponse.CopyStopRow> rows = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      TrainStopEntity original = sourceStops.get(n - 1 - i); // reverse order
+      int reversedKm = totalKm - original.getKmFromSource();
+
+      boolean isFirst = (i == 0);
+      boolean isLast  = (i == n - 1);
+
+      rows.add(CopyStopsPreviewResponse.CopyStopRow.builder()
+        .stopNumber(i + 1)
+        .stationCode(original.getStation().getStationCode())
+        .stationName(original.getStation().getStationName())
+        .stationType(original.getStation().getStationType() != null
+          ? original.getStation().getStationType().name() : null)
+        .kmFromSource(reversedKm)
+        .dayNumber(1)       // user adjusts day numbers if needed
+        .isFirst(isFirst)
+        .isLast(isLast)
+        .arrivalTime(null)  // user fills
+        .departureTime(null)// user fills
+        .build());
+    }
+
+    return CopyStopsPreviewResponse.builder()
+      .sourceTrainNumber(sourceTrainNumber)
+      .targetTrainNumber(targetTrainNumber)
+      .stopCount(n)
+      .stops(rows)
+      .build();
+  }
+
+  // ── Validate bulk stops list ──────────────────────────────────────────────
+  private void validateBulkStops(List<AddTrainStopRequest> stops, String trainNumber) {
+    if (stops.size() < 2) {
+      throw new BaseException(HttpStatus.BAD_REQUEST, "INSUFFICIENT_STOPS",
+        "At least 2 stops required.");
+    }
+
+    // Stop numbers must be sequential starting from 1
+    for (int i = 0; i < stops.size(); i++) {
+      int expected = i + 1;
+      int actual   = stops.get(i).getStopNumber() != null
+        ? stops.get(i).getStopNumber() : expected;
+      if (actual != expected) {
+        throw new BaseException(HttpStatus.BAD_REQUEST, "INVALID_STOP_SEQUENCE",
+          "Stop numbers must be sequential starting from 1. " +
+            "Expected stop #" + expected + " but got #" + actual + ".");
+      }
+      stops.get(i).setStopNumber(expected); // normalize
+    }
+
+    // KM must be strictly increasing
+    int prevKm = -1;
+    for (AddTrainStopRequest stop : stops) {
+      if (stop.getKmFromSource() <= prevKm) {
+        throw new BaseException(HttpStatus.BAD_REQUEST, "KM_NOT_INCREASING",
+          "KM from source must be strictly increasing across all stops.");
+      }
+      prevKm = stop.getKmFromSource();
+    }
+
+    // First stop: km=0, no arrival
+    AddTrainStopRequest first = stops.get(0);
+    if (first.getKmFromSource() != 0) {
+      throw new BaseException(HttpStatus.BAD_REQUEST, "INVALID_FIRST_STOP",
+        "First stop must have km_from_source = 0.");
+    }
+    if (first.getArrivalTime() != null && !first.getArrivalTime().isBlank()) {
+      throw new BaseException(HttpStatus.BAD_REQUEST, "INVALID_FIRST_STOP",
+        "First stop (source) cannot have an arrival time.");
+    }
+
+    // Last stop: no departure
+    AddTrainStopRequest last = stops.get(stops.size() - 1);
+    if (last.getDepartureTime() != null && !last.getDepartureTime().isBlank()) {
+      throw new BaseException(HttpStatus.BAD_REQUEST, "INVALID_LAST_STOP",
+        "Last stop (destination) cannot have a departure time.");
+    }
+
+    // Duplicate station check within the bulk list
+    long distinctStations = stops.stream()
+      .map(s -> s.getStationCode().trim().toUpperCase())
+      .distinct().count();
+    if (distinctStations != stops.size()) {
+      throw new BaseException(HttpStatus.BAD_REQUEST, "DUPLICATE_STATION",
+        "Duplicate stations found in the stop list.");
+    }
+  }
+
+
 }

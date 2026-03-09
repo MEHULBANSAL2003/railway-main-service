@@ -66,4 +66,24 @@ public interface TrainStopRepository extends JpaRepository<TrainStopEntity, Long
   void shiftStopNumbersDown(
     @Param("trainId") Long trainId,
     @Param("afterStop") int afterStop);
+
+
+  // Add these methods to TrainStopRepository:
+
+  // Find the source stop (stop_number = 1)
+  @Query("SELECT ts FROM TrainStopEntity ts " +
+    "JOIN FETCH ts.station " +
+    "WHERE ts.train.trainId = :trainId AND ts.stopNumber = 1")
+  Optional<TrainStopEntity> findSourceStop(@Param("trainId") Long trainId);
+
+  // Find the destination stop (max stop_number, departure_time IS NULL)
+  @Query("SELECT ts FROM TrainStopEntity ts " +
+    "JOIN FETCH ts.station " +
+    "WHERE ts.train.trainId = :trainId " +
+    "AND ts.departureTime IS NULL " +
+    "AND ts.stopNumber = (SELECT MAX(ts2.stopNumber) FROM TrainStopEntity ts2 " +
+    "                     WHERE ts2.train.trainId = :trainId)")
+  Optional<TrainStopEntity> findDestinationStop(@Param("trainId") Long trainId);
+
+
 }

@@ -4,7 +4,9 @@ package com.railway.main_service.controller;
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.trainStop.AddTrainStopRequest;
+import com.railway.main_service.dto.request.trainStop.BulkAddTrainStopRequest;
 import com.railway.main_service.dto.request.trainStop.UpdateTrainStopRequest;
+import com.railway.main_service.dto.response.trainStop.CopyStopsPreviewResponse;
 import com.railway.main_service.dto.response.trainStop.TrainStopResponse;
 import com.railway.main_service.service.trainStopService.TrainStopService;
 import jakarta.validation.Valid;
@@ -58,5 +60,25 @@ public class TrainStopController {
     @PathVariable Long stopId) {
     trainStopService.deleteStop(trainNumber, stopId);
     return ResponseEntity.ok(ApiResponse.success(null));
+  }
+
+  @PostMapping("/bulk")
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<List<TrainStopResponse>>> bulkAddStops(
+    @PathVariable String trainNumber,
+    @Valid @RequestBody BulkAddTrainStopRequest request) {
+    return ResponseEntity.ok(
+      ApiResponse.success(trainStopService.bulkAddStops(trainNumber, request)));
+  }
+
+  // GET /api/main/trains/{trainNumber}/stops/copy-preview?targetTrain=12952
+  // Returns reversed + recalculated stops for target train (no times)
+  @GetMapping("/copy-preview")
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<CopyStopsPreviewResponse>> getCopyPreview(
+    @PathVariable String trainNumber,
+    @RequestParam String targetTrain) {
+    return ResponseEntity.ok(
+      ApiResponse.success(trainStopService.getCopyPreview(trainNumber, targetTrain)));
   }
 }
