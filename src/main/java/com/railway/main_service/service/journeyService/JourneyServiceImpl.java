@@ -184,7 +184,7 @@ public class JourneyServiceImpl implements JourneyService {
 
     TrainScheduleEntity schedule = findActiveSchedule(train);
 
-    if ("generate".equals(source) && !runsOnDate(schedule, date))
+    if (!runsOnDate(schedule, date))
       throw new BaseException(HttpStatus.BAD_REQUEST, "SCHEDULE_DAY_MISMATCH",
         "Train " + train.getTrainNumber() + " does not run on " +
           date.getDayOfWeek().name() + " (" + schedule.getRunsOnDays() + ")");
