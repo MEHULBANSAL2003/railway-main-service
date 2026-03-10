@@ -64,4 +64,12 @@ public interface TrainScheduleRepository extends JpaRepository<TrainScheduleEnti
   boolean hasActiveUpcoming(
     @Param("trainId") Long trainId,
     @Param("today")   LocalDate today);
+
+  @Query("SELECT s FROM TrainScheduleEntity s " +
+    "JOIN FETCH s.train t " +
+    "WHERE s.isActive = true " +
+    "AND s.startDate <= :targetDate " +
+    "AND (s.endDate IS NULL OR s.endDate >= :targetDate)")
+  List<TrainScheduleEntity> findActiveSchedulesForDate(
+    @Param("targetDate") LocalDate targetDate);
 }

@@ -17,6 +17,7 @@ public class ApiConstants {
   public static final String TRAIN_COACHES        = API_BASE + "/train/coaches";
   public static final String TRAIN_STOPS        = API_BASE + "/trains/{trainNumber}/stops";
   public static final String TRAIN_SCHEDULE        = API_BASE + "/trains/{trainNumber}/schedule";
+  public static final String TRAIN_JOURNEYS = API_BASE + "/trains/{trainNumber}/journeys";
 
 
   //stations
@@ -104,6 +105,13 @@ public class ApiConstants {
   public static final String ADD_NEW_TRAIN_STOP = "/add/new";
   public static final String UPDATE_TRAIN_STOP = "/update/{stopId}";
   public static final String DELETE_TRAIN_STOP = "/delete/{stopId}";
+
+  // train journey
+
+  public static final String GENERATE_TRAIN_JOURNEY = "/generate";
+  public static final String BULK_GENERATE_TRAIN_JOURNEY = "/bulk-generate";
+  public static final String ADD_TRAIN_JOURNEY = "/add";
+  public static final String CANCEL_TRAIN_JOURNEY = "{journeyId}/cancel";
 
 
   private ApiConstants() {
