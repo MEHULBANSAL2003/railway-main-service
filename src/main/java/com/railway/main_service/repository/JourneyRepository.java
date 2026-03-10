@@ -1,6 +1,8 @@
 package com.railway.main_service.repository;
 
 import com.railway.main_service.entity.JourneyEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -57,4 +59,18 @@ public interface JourneyRepository extends JpaRepository<JourneyEntity, Long> {
     "SET j.chartPrepared = true, j.updatedAt = CURRENT_TIMESTAMP " +
     "WHERE j.journeyId = :journeyId")
   void markChartPrepared(@Param("journeyId") Long journeyId);
+
+// Replace the findFiltered method in your JourneyRepository with this:
+
+  @Query("""
+    SELECT j FROM JourneyEntity j
+    WHERE j.train.trainId = :trainId
+      AND (CAST(:dateFrom AS date) IS NULL OR j.journeyDate >= :dateFrom)
+      AND (CAST(:dateTo   AS date) IS NULL OR j.journeyDate <= :dateTo)
+    """)
+  Page<JourneyEntity> findFiltered(
+    @Param("trainId")  Long      trainId,
+    @Param("dateFrom") LocalDate dateFrom,
+    @Param("dateTo")   LocalDate dateTo,
+    Pageable pageable);
 }
