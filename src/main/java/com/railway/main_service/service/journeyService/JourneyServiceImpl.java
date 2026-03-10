@@ -9,6 +9,7 @@ import com.railway.main_service.entity.*;
 import com.railway.main_service.enums.JourneyStatus;
 import com.railway.main_service.enums.RunDay;
 import com.railway.main_service.repository.*;
+import com.railway.main_service.service.inventoryService.InventoryInitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
@@ -36,6 +37,7 @@ public class JourneyServiceImpl implements JourneyService {
   private final TrainScheduleRepository scheduleRepository;
   private final TrainStopRepository     trainStopRepository;
   private final TrainCoachRepository    trainCoachRepository;
+  private final InventoryInitService inventoryInitService;
 
   // ── Paginated list — all history, filtered ────────────────────────────────
 
@@ -106,8 +108,9 @@ public class JourneyServiceImpl implements JourneyService {
         JourneyEntity j = JourneyEntity.builder()
           .train(train).schedule(schedule).journeyDate(cursor)
           .isCancelled(false).chartPrepared(false).build();
-        journeyRepository.save(j);
-        createdDates.add(cursor);
+        JourneyEntity saved = journeyRepository.save(j);
+      inventoryInitService.initForJourney(saved);
+      createdDates.add(cursor);
       } else { skipped++; }
       cursor = cursor.plusDays(1);
     }
@@ -194,6 +197,8 @@ public class JourneyServiceImpl implements JourneyService {
         .journeyDate(date).isCancelled(false).chartPrepared(false).build()
     );
     log.info("Journey created [{}] for train {} on {}", source, train.getTrainNumber(), date);
+
+    inventoryInitService.initForJourney(saved);
 
     LocalTime srcDep = trainStopRepository.findSourceStop(train.getTrainId())
       .map(TrainStopEntity::getDepartureTime).orElse(null);

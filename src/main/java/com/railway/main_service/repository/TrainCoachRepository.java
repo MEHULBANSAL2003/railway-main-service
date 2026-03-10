@@ -19,6 +19,8 @@ public interface TrainCoachRepository extends JpaRepository<TrainCoachEntity, Lo
     "ORDER BY ct.typeCode ASC")
   List<TrainCoachEntity> findAllByTrainId(@Param("trainId") Long trainId);
 
+  List<TrainCoachEntity> findByTrain_TrainIdAndIsActiveTrue(@Param("trainId") Long trainId);
+
   // Check duplicate before add
   boolean existsByTrain_TrainIdAndCoachType_TypeId(Long trainId, Long coachTypeId);
 
