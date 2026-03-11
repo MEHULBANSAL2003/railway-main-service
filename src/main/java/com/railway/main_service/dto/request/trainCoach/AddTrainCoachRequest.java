@@ -2,6 +2,7 @@ package com.railway.main_service.dto.request.trainCoach;
 
 import jakarta.validation.constraints.*;
 import lombok.Data;
+import java.time.LocalDate;
 
 @Data
 public class AddTrainCoachRequest {
@@ -18,14 +19,22 @@ public class AddTrainCoachRequest {
   @Min(value = 0, message = "Tatkal seats cannot be negative.")
   private Integer tatkalSeats;
 
-  // Per coach — validated against coachType.totalSeats in service
   @NotNull(message = "RAC seats is required.")
   @Min(value = 0, message = "RAC seats cannot be negative.")
   private Integer racSeats;
 
-  // Flat total WL pool for this class on this train
   @NotNull(message = "Waitlist limit is required.")
   @Min(value = 0,    message = "Waitlist limit cannot be negative.")
   @Max(value = 1000, message = "Waitlist limit cannot exceed 1000.")
   private Integer waitlistLimit;
+
+  // Optional — defaults to today in service if not provided
+  private LocalDate effectiveFrom;
+
+  // Optional — null means no end date (open-ended)
+  private LocalDate effectiveTo;
+
+  // Optional — reason for adding this coach config
+  @Size(max = 500)
+  private String changeReason;
 }

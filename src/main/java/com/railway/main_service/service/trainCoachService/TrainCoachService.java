@@ -25,4 +25,6 @@ public interface TrainCoachService {
   List<CoachTypeDropdownResponse> getAvailableCoachTypes(String trainNumber);
 
   TrainCopyCoachesResponse copyCoaches(String sourceTrainNumber, String targetTrainNumber);
+
+  List<TrainCoachResponse> getCoachHistory(String trainNumber, String coachTypeCode);
 }

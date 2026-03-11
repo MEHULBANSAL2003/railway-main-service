@@ -15,12 +15,14 @@ import com.railway.main_service.repository.CoachTypeRepository;
 import com.railway.main_service.repository.TrainCoachRepository;
 import com.railway.main_service.repository.TrainRepository;
 import com.railway.main_service.repository.TrainTypeCoachRepository;
+import com.railway.main_service.service.inventoryService.InventoryInitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 
@@ -31,6 +33,7 @@ public class TrainCoachServiceImpl implements TrainCoachService {
   private final TrainRepository      trainRepository;
   private final CoachTypeRepository  coachTypeRepository;
   private final TrainTypeCoachRepository trainTypeCoachRepository;
+  private final InventoryInitService inventoryInitService;
 
   // ── Add ───────────────────────────────────────────────────────────────────
   @Override
@@ -40,12 +43,15 @@ public class TrainCoachServiceImpl implements TrainCoachService {
     TrainEntity     train     = findActiveTrain(trainNumber);
     CoachTypeEntity coachType = findActiveCoachType(req.getCoachTypeCode());
 
-    // One row per train + coachType
-    if (trainCoachRepository.existsByTrain_TrainIdAndCoachType_TypeId(
+    // Block if an open-ended (currently active) row already exists for this type
+    if (trainCoachRepository.existsActiveRowByTrainAndCoachType(
       train.getTrainId(), coachType.getTypeId()))
       throw new BaseException(HttpStatus.CONFLICT, "COACH_ALREADY_EXISTS",
-        "Train " + trainNumber + " already has coach type '" +
-          coachType.getTypeCode() + "'. Edit the existing row to change values.");
+        "Train " + trainNumber + " already has an active config for coach type '" +
+          coachType.getTypeCode() + "'. Use 'Change Config' to modify it.");
+
+    LocalDate effectiveFrom = req.getEffectiveFrom() != null
+      ? req.getEffectiveFrom() : LocalDate.now();
 
     int totalSeats = coachType.getTotalSeats();
     validatePerCoachQuotas(req.getTatkalSeats(), req.getRacSeats(),
@@ -58,10 +64,20 @@ public class TrainCoachServiceImpl implements TrainCoachService {
       .tatkalSeats(req.getTatkalSeats())
       .racSeats(req.getRacSeats())
       .waitlistLimit(req.getWaitlistLimit())
+      .isActive(true)
+      .effectiveFrom(effectiveFrom)
+      .effectiveTo(req.getEffectiveTo())
+      .changeReason(req.getChangeReason())
       .createdBy(SecurityUtils.getCurrentAdminId())
       .build();
 
-    return toResponse(trainCoachRepository.save(entity), "Coach added successfully.");
+    TrainCoachEntity saved = trainCoachRepository.save(entity);
+
+    // Init inventory for all future journeys from effectiveFrom onwards
+    // that don't yet have inventory for this coach type
+    inventoryInitService.initForNewCoach(saved);
+
+    return toResponse(saved, "Coach added successfully.");
   }
 
   // ── Update ────────────────────────────────────────────────────────────────
@@ -107,7 +123,15 @@ public class TrainCoachServiceImpl implements TrainCoachService {
   @Override
   public List<TrainCoachResponse> getAllByTrain(String trainNumber) {
     TrainEntity train = findTrainByNumber(trainNumber);
-    return trainCoachRepository.findAllByTrainId(train.getTrainId())
+    return trainCoachRepository.findCurrentByTrainId(train.getTrainId(), LocalDate.now())
+      .stream().map(e -> toResponse(e, null)).toList();
+  }
+
+  @Override
+  public List<TrainCoachResponse> getCoachHistory(String trainNumber, String coachTypeCode) {
+    TrainEntity train = findTrainByNumber(trainNumber);
+    return trainCoachRepository
+      .findHistoryByTrainIdAndTypeCode(train.getTrainId(), coachTypeCode.toUpperCase())
       .stream().map(e -> toResponse(e, null)).toList();
   }
 
@@ -182,6 +206,9 @@ public class TrainCoachServiceImpl implements TrainCoachService {
       .totalCoachSeats(count * totalSeats)
       .totalTatkalSeats(count * e.getTatkalSeats())
       .totalRacSeats(count * e.getRacSeats())
+      .effectiveFrom(e.getEffectiveFrom())
+      .effectiveTo(e.getEffectiveTo())
+      .changeReason(e.getChangeReason())
       .isActive(e.getIsActive())
       .createdBy(e.getCreatedBy())
       .updatedBy(e.getUpdatedBy())

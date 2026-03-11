@@ -73,4 +73,29 @@ public interface JourneyRepository extends JpaRepository<JourneyEntity, Long> {
     @Param("dateFrom") LocalDate dateFrom,
     @Param("dateTo")   LocalDate dateTo,
     Pageable pageable);
+
+  @Query("""
+    SELECT j FROM JourneyEntity j
+    WHERE j.train.trainId   = :trainId
+      AND j.journeyDate    >= :fromDate
+      AND j.isCancelled     = false
+    ORDER BY j.journeyDate ASC
+    """)
+  List<JourneyEntity> findByTrainIdFromDate(
+    @Param("trainId")  Long      trainId,
+    @Param("fromDate") LocalDate fromDate);
+
+  // All non-cancelled journeys for a train within a date range
+  @Query("""
+    SELECT j FROM JourneyEntity j
+    WHERE j.train.trainId  = :trainId
+      AND j.journeyDate   >= :fromDate
+      AND j.journeyDate   <= :toDate
+      AND j.isCancelled    = false
+    ORDER BY j.journeyDate ASC
+    """)
+  List<JourneyEntity> findByTrainIdAndDateRange(
+    @Param("trainId")  Long      trainId,
+    @Param("fromDate") LocalDate fromDate,
+    @Param("toDate")   LocalDate toDate);
 }

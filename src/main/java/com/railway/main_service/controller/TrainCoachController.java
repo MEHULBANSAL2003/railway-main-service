@@ -107,4 +107,13 @@ public class TrainCoachController {
     return ResponseEntity.ok(ApiResponse.success(
       trainCoachConfigService.deactivate(trainNumber, coachId, request)));
   }
+
+  @GetMapping("/{trainNumber}/{coachTypeCode}/history")
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<List<TrainCoachResponse>>> getCoachHistory(
+    @PathVariable String trainNumber,
+    @PathVariable String coachTypeCode) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainCoachService.getCoachHistory(trainNumber, coachTypeCode)));
+  }
 }

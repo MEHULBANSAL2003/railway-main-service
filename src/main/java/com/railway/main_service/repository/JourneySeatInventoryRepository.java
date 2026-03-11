@@ -117,4 +117,7 @@ public interface JourneySeatInventoryRepository extends JpaRepository<JourneySea
     @Param("toDate") LocalDate toDate);
 
 
+  boolean existsByJourney_JourneyIdAndTrainCoach_CoachId(Long journeyId, Long coachId);
+
+
 }

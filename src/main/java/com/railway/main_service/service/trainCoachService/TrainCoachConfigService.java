@@ -13,6 +13,7 @@ import com.railway.main_service.enums.QuotaType;
 import com.railway.main_service.repository.JourneySeatInventoryRepository;
 import com.railway.main_service.repository.TrainCoachRepository;
 import com.railway.main_service.repository.TrainRepository;
+import com.railway.main_service.service.inventoryService.InventoryInitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
