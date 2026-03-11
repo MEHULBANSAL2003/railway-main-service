@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,5 +44,32 @@ public interface TrainCoachRepository extends JpaRepository<TrainCoachEntity, Lo
 
   @Query("SELECT tc.coachType.typeId FROM TrainCoachEntity tc WHERE tc.train.trainId = :trainId")
    List<Long> findUsedCoachTypeIdsByTrainId(@Param("trainId") Long trainId);
+
+
+  @Query("""
+    SELECT tc FROM TrainCoachEntity tc
+    JOIN FETCH tc.coachType ct
+    WHERE tc.train.trainId = :trainId
+      AND tc.effectiveFrom <= :journeyDate
+      AND (tc.effectiveTo IS NULL OR tc.effectiveTo >= :journeyDate)
+    """)
+  List<TrainCoachEntity> findActiveCoachesForDate(
+    @Param("trainId")     Long      trainId,
+    @Param("journeyDate") LocalDate journeyDate);
+
+  // Used in change-config validation — find all coaches for a train
+// that overlap with a given date range (for conflict checking)
+  @Query("""
+    SELECT tc FROM TrainCoachEntity tc
+    WHERE tc.train.trainId  = :trainId
+      AND tc.coachType.typeId = :coachTypeId
+      AND tc.effectiveFrom  <= :dateTo
+      AND (tc.effectiveTo IS NULL OR tc.effectiveTo >= :dateFrom)
+    """)
+  List<TrainCoachEntity> findOverlapping(
+    @Param("trainId")     Long      trainId,
+    @Param("coachTypeId") Long      coachTypeId,
+    @Param("dateFrom") LocalDate dateFrom,
+    @Param("dateTo")      LocalDate dateTo);
 
 }

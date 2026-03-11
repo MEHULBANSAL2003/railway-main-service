@@ -3,10 +3,12 @@ package com.railway.main_service.repository;
 import com.railway.main_service.entity.JourneySeatInventoryEntity;
 import com.railway.main_service.enums.QuotaType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,4 +47,74 @@ public interface JourneySeatInventoryRepository extends JpaRepository<JourneySea
         AND i.quotaType = 'GENERAL'
       """)
   List<JourneySeatInventoryEntity> findGeneralByJourneyId(@Param("journeyId") Long journeyId);
+
+
+
+  @Query("""
+    SELECT i FROM JourneySeatInventoryEntity i
+    WHERE i.trainCoach.coachId = :coachId
+      AND i.journey.journeyDate >= :fromDate
+      AND i.journey.isCancelled = false
+    ORDER BY i.journey.journeyDate
+    """)
+  List<JourneySeatInventoryEntity> findByCoachFromDate(
+    @Param("coachId")   Long      coachId,
+    @Param("fromDate")  LocalDate fromDate);
+
+  // Update inventory totals for all journeys in a date range for a specific coach+quota
+// Called after a config change is approved
+  @Modifying
+  @Query("""
+    UPDATE JourneySeatInventoryEntity i
+    SET i.totalSeats    = :totalSeats,
+        i.totalRac      = :totalRac,
+        i.waitlistLimit = :waitlistLimit,
+        i.updatedAt     = CURRENT_TIMESTAMP
+    WHERE i.trainCoach.coachId  = :coachId
+      AND i.quotaType            = 'GENERAL'
+      AND i.journey.journeyDate >= :fromDate
+      AND (:toDate IS NULL OR i.journey.journeyDate <= :toDate)
+    """)
+  int updateGeneralInventory(
+    @Param("coachId")      Long      coachId,
+    @Param("totalSeats")   int       totalSeats,
+    @Param("totalRac")     int       totalRac,
+    @Param("waitlistLimit") int      waitlistLimit,
+    @Param("fromDate")     LocalDate fromDate,
+    @Param("toDate")       LocalDate toDate);
+
+  @Modifying
+  @Query("""
+    UPDATE JourneySeatInventoryEntity i
+    SET i.totalSeats = :totalSeats,
+        i.updatedAt  = CURRENT_TIMESTAMP
+    WHERE i.trainCoach.coachId  = :coachId
+      AND i.quotaType            = 'TATKAL'
+      AND i.journey.journeyDate >= :fromDate
+      AND (:toDate IS NULL OR i.journey.journeyDate <= :toDate)
+    """)
+  int updateTatkalInventory(
+    @Param("coachId")    Long      coachId,
+    @Param("totalSeats") int       totalSeats,
+    @Param("fromDate")   LocalDate fromDate,
+    @Param("toDate")     LocalDate toDate);
+
+  // Delete inventory rows for cancelled/deactivated coach from a date onwards
+// Only deletes rows where nothing is booked yet
+  @Modifying
+  @Query("""
+    DELETE FROM JourneySeatInventoryEntity i
+    WHERE i.trainCoach.coachId  = :coachId
+      AND i.journey.journeyDate >= :fromDate
+      AND (:toDate IS NULL OR i.journey.journeyDate <= :toDate)
+      AND i.bookedConfirmed = 0
+      AND i.bookedRac       = 0
+      AND i.bookedWaitlist  = 0
+    """)
+  int deleteUnbookedInventory(
+    @Param("coachId")  Long      coachId,
+    @Param("fromDate") LocalDate fromDate,
+    @Param("toDate") LocalDate toDate);
+
+
 }

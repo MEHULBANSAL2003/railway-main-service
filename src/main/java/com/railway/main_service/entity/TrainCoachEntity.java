@@ -2,17 +2,14 @@ package com.railway.main_service.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @Entity
 @Table(
   name = "train_coaches",
-  schema = "railway_main",
-  uniqueConstraints = {
-    @UniqueConstraint(name = "uk_train_coach_type",
-      columnNames = { "train_id", "coach_type_id" })
-  }
+  schema = "railway_main"
 )
 public class TrainCoachEntity {
 
@@ -31,25 +28,17 @@ public class TrainCoachEntity {
     foreignKey = @ForeignKey(name = "fk_train_coach_type"))
   private CoachTypeEntity coachType;
 
-  // How many physical coaches of this type (e.g. 6 → S1…S6)
   @Column(name = "coach_count", nullable = false)
   private Integer coachCount;
 
-  // Per coach — scales with coachCount
-  // e.g. 8 tatkal × 6 coaches = 48 total tatkal seats
   @Column(name = "tatkal_seats", nullable = false)
   @Builder.Default
   private Integer tatkalSeats = 0;
 
-  // Per coach — physically tied to each coach (side berths in SL/3A)
-  // e.g. 4 RAC × 6 coaches = 24 total RAC seats
   @Column(name = "rac_seats", nullable = false)
   @Builder.Default
   private Integer racSeats = 0;
 
-  // Flat total for this coach class on this train
-  // IRCTC sets one WL pool per class, not per individual coach
-  // e.g. SL waitlist cap = 200 regardless of coach count
   @Column(name = "waitlist_limit", nullable = false)
   @Builder.Default
   private Integer waitlistLimit = 0;
@@ -58,6 +47,20 @@ public class TrainCoachEntity {
   @Builder.Default
   private Boolean isActive = true;
 
+  // ── Effective date range ──────────────────────────────
+  // effectiveFrom: config is valid from this date onwards
+  // effectiveTo:   null = still active (no end date)
+  // When config changes → close this row (set effectiveTo) + insert new row
+  @Column(name = "effective_from", nullable = false)
+  private LocalDate effectiveFrom;
+
+  @Column(name = "effective_to")
+  private LocalDate effectiveTo;
+
+  @Column(name = "change_reason", length = 500)
+  private String changeReason;
+
+  // ── Audit ─────────────────────────────────────────────
   @Column(name = "created_by")
   private Long createdBy;
 
@@ -71,8 +74,22 @@ public class TrainCoachEntity {
   private LocalDateTime updatedAt;
 
   @PrePersist
-  protected void onCreate() { createdAt = LocalDateTime.now(); updatedAt = LocalDateTime.now(); }
+  protected void onCreate() {
+    createdAt = LocalDateTime.now();
+    updatedAt = LocalDateTime.now();
+    // Default effectiveFrom to today if not explicitly set
+    if (effectiveFrom == null) effectiveFrom = LocalDate.now();
+  }
 
   @PreUpdate
   protected void onUpdate() { updatedAt = LocalDateTime.now(); }
+
+  // ── Derived helper ────────────────────────────────────
+  @Transient
+  public boolean isCurrentlyActive() {
+    LocalDate today = LocalDate.now();
+    return Boolean.TRUE.equals(isActive)
+      && !effectiveFrom.isAfter(today)
+      && (effectiveTo == null || !effectiveTo.isBefore(today));
+  }
 }

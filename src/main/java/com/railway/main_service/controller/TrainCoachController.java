@@ -3,11 +3,15 @@ package com.railway.main_service.controller;
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.trainCoach.AddTrainCoachRequest;
+import com.railway.main_service.dto.request.trainCoach.ChangeCoachConfigRequest;
 import com.railway.main_service.dto.request.trainCoach.CopyCoachesRequest;
+import com.railway.main_service.dto.request.trainCoach.DeactivateCoachRequest;
 import com.railway.main_service.dto.request.trainCoach.UpdateTrainCoachRequest;
+import com.railway.main_service.dto.response.trainCoach.CoachConfigChangeResponse;
 import com.railway.main_service.dto.response.trainCoach.CoachTypeDropdownResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCoachResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCopyCoachesResponse;
+import com.railway.main_service.service.trainCoachService.TrainCoachConfigService;
 import com.railway.main_service.service.trainCoachService.TrainCoachService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +27,7 @@ import java.util.List;
 public class TrainCoachController {
 
   private final TrainCoachService trainCoachService;
+  private final TrainCoachConfigService trainCoachConfigService;
 
   // GET  /api/main/trains/{trainNumber}/coaches
   @GetMapping(ApiConstants.GET_TRAIN_COACHES)
@@ -80,5 +85,26 @@ public class TrainCoachController {
     @Valid @RequestBody CopyCoachesRequest request) {
     return ResponseEntity.ok(ApiResponse.success(
       trainCoachService.copyCoaches(trainNumber, request.getTargetTrainNumber())));
+  }
+
+  @PostMapping("/{trainNumber}/{coachId}/change-config")
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<CoachConfigChangeResponse>> changeConfig(
+    @PathVariable String trainNumber,
+    @PathVariable Long   coachId,
+    @Valid @RequestBody ChangeCoachConfigRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainCoachConfigService.changeConfig(trainNumber, coachId, request)));
+  }
+
+  // POST /api/main/trains/{trainNumber}/coaches/{coachId}/deactivate
+  @PostMapping("/{trainNumber}/{coachId}/deactivate")
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<CoachConfigChangeResponse>> deactivate(
+    @PathVariable String trainNumber,
+    @PathVariable Long   coachId,
+    @Valid @RequestBody DeactivateCoachRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainCoachConfigService.deactivate(trainNumber, coachId, request)));
   }
 }
