@@ -48,6 +48,16 @@
       <artifactId>common-security</artifactId>
       <version>1.0.0</version>
     </dependency>
+    <dependency>
+      <groupId>com.railway</groupId>
+      <artifactId>common-pagination</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.railway</groupId>
+      <artifactId>common-excel</artifactId>
+      <version>1.0.0</version>
+    </dependency>
 
     <dependency>
       <groupId>com.railway</groupId>
