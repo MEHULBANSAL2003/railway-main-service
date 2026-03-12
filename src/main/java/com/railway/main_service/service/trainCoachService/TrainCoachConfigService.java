@@ -4,6 +4,7 @@ import com.railway.common.exceptions.BaseException;
 import com.railway.common.security.SecurityUtils;
 import com.railway.main_service.dto.request.trainCoach.ChangeCoachConfigRequest;
 import com.railway.main_service.dto.request.trainCoach.DeactivateCoachRequest;
+import com.railway.main_service.dto.request.trainCoach.ReactivateCoachRequest;
 import com.railway.main_service.dto.response.trainCoach.CoachConfigChangeResponse;
 import com.railway.main_service.dto.response.trainCoach.CoachConfigConflictItem;
 import com.railway.main_service.entity.JourneySeatInventoryEntity;
@@ -13,7 +14,6 @@ import com.railway.main_service.enums.QuotaType;
 import com.railway.main_service.repository.JourneySeatInventoryRepository;
 import com.railway.main_service.repository.TrainCoachRepository;
 import com.railway.main_service.repository.TrainRepository;
-import com.railway.main_service.service.inventoryService.InventoryInitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -37,27 +37,30 @@ public class TrainCoachConfigService {
   private final JourneySeatInventoryRepository inventoryRepository;
 
   // ── Change Config ─────────────────────────────────────────────────────────
+  // Edits the existing row directly — no close+insert.
+  // Checks conflicts first. If any booked journey exceeds new limits, blocks.
   @Transactional
   public CoachConfigChangeResponse changeConfig(String trainNumber, Long coachId,
                                                 ChangeCoachConfigRequest req) {
     TrainEntity      train = findTrain(trainNumber);
     TrainCoachEntity coach = findCoach(coachId, train.getTrainId());
 
+    if (!Boolean.TRUE.equals(coach.getIsActive()))
+      throw new BaseException(HttpStatus.BAD_REQUEST, "COACH_INACTIVE",
+        "Cannot change config of an inactive coach. Reactivate it first.");
+
     validateDateRange(req.getEffectiveFrom(), req.getEffectiveTo());
 
     int seatsPerCoach = coach.getCoachType().getTotalSeats();
-
-    // Validate per-coach quotas (tatkal + rac <= seatsPerCoach)
     validatePerCoachQuotas(req.getTatkalSeats(), req.getRacSeats(),
       seatsPerCoach, coach.getCoachType().getTypeCode());
 
-    // Compute new totals
     int newTotalSeats    = req.getCoachCount() * seatsPerCoach;
     int newTotalTatkal   = req.getCoachCount() * req.getTatkalSeats();
     int newTotalRac      = req.getCoachCount() * req.getRacSeats();
     int newWaitlistLimit = req.getWaitlistLimit();
 
-    // ── Conflict check — only needed if decreasing any value ─────────────────
+    // ── Conflict check ────────────────────────────────────────────────────
     List<CoachConfigConflictItem> conflicts = checkConflicts(
       coach, req.getEffectiveFrom(), req.getEffectiveTo(),
       newTotalSeats, newTotalTatkal, newTotalRac, newWaitlistLimit
@@ -72,64 +75,47 @@ public class TrainCoachConfigService {
         .build();
     }
 
-    // ── Apply: close current row, insert new ─────────────────────────────────
-    coach.setEffectiveTo(req.getEffectiveFrom().minusDays(1));
+    // ── Apply: edit the existing row directly ─────────────────────────────
+    coach.setCoachCount(req.getCoachCount());
+    coach.setTatkalSeats(req.getTatkalSeats());
+    coach.setRacSeats(req.getRacSeats());
+    coach.setWaitlistLimit(req.getWaitlistLimit());
+    coach.setEffectiveFrom(req.getEffectiveFrom());
+    coach.setEffectiveTo(req.getEffectiveTo());
+    coach.setChangeReason(req.getChangeReason());
     coach.setUpdatedBy(SecurityUtils.getCurrentAdminId());
-    trainCoachRepository.saveAndFlush(coach);
+    trainCoachRepository.save(coach);
 
-    TrainCoachEntity newConfig = TrainCoachEntity.builder()
-      .train(coach.getTrain())
-      .coachType(coach.getCoachType())
-      .coachCount(req.getCoachCount())
-      .tatkalSeats(req.getTatkalSeats())
-      .racSeats(req.getRacSeats())
-      .waitlistLimit(req.getWaitlistLimit())
-      .isActive(true)
-      .effectiveFrom(req.getEffectiveFrom())
-      .effectiveTo(req.getEffectiveTo())
-      .changeReason(req.getChangeReason())
-      .createdBy(SecurityUtils.getCurrentAdminId())
-      .build();
-
-    TrainCoachEntity saved = trainCoachRepository.save(newConfig);
-
-    // ── Update inventory rows in date range ──────────────────────────────────
+    // ── Update inventory rows in date range ───────────────────────────────
     int generalUpdated = inventoryRepository.updateGeneralInventory(
-      saved.getCoachId(), newTotalSeats, newTotalRac, newWaitlistLimit,
-      req.getEffectiveFrom(), req.getEffectiveTo()
-    );
-
-    int tatkalUpdated = inventoryRepository.updateTatkalInventory(
-      saved.getCoachId(), newTotalTatkal,
-      req.getEffectiveFrom(), req.getEffectiveTo()
-    );
-
-    // Also update old coachId's inventory rows to point to new coachId
-    // (inventory rows still reference the old coachId — update them)
-    int genOld = inventoryRepository.updateGeneralInventory(
       coachId, newTotalSeats, newTotalRac, newWaitlistLimit,
       req.getEffectiveFrom(), req.getEffectiveTo()
     );
-    int tatOld = inventoryRepository.updateTatkalInventory(
+    int tatkalUpdated = inventoryRepository.updateTatkalInventory(
       coachId, newTotalTatkal,
       req.getEffectiveFrom(), req.getEffectiveTo()
     );
 
-    int affected = genOld + tatOld;
+    int affected = generalUpdated + tatkalUpdated;
 
-    log.info("Coach config changed for train {} coachId {} → newCoachId {} | {} inventory rows updated",
-      trainNumber, coachId, saved.getCoachId(), affected);
+    log.info("Coach config changed for train {} coachId {} | {} inventory rows updated",
+      trainNumber, coachId, affected);
 
     return CoachConfigChangeResponse.builder()
       .success(true)
       .message("Config updated from " + req.getEffectiveFrom().format(DATE_FMT) +
-        (req.getEffectiveTo() != null ? " to " + req.getEffectiveTo().format(DATE_FMT) : " onwards") +
+        (req.getEffectiveTo() != null
+          ? " to " + req.getEffectiveTo().format(DATE_FMT)
+          : " onwards") +
         ". " + affected + " journey inventory rows updated.")
       .affectedJourneys(affected)
       .build();
   }
 
   // ── Deactivate ────────────────────────────────────────────────────────────
+  // Sets effectiveTo = effectiveFrom - 1 on the current active row.
+  // Removes unbooked inventory from effectiveFrom onwards.
+  // Blocks if any journey in range has existing bookings.
   @Transactional
   public CoachConfigChangeResponse deactivate(String trainNumber, Long coachId,
                                               DeactivateCoachRequest req) {
@@ -142,11 +128,10 @@ public class TrainCoachConfigService {
 
     validateDateRange(req.getEffectiveFrom(), req.getEffectiveTo());
 
-    // Check if any journey in the date range has bookings
+    // Check for bookings in the date range
     List<JourneySeatInventoryEntity> inventoryRows =
       inventoryRepository.findByCoachFromDate(coachId, req.getEffectiveFrom());
 
-    // Filter to date range if effectiveTo is set
     if (req.getEffectiveTo() != null) {
       inventoryRows = inventoryRows.stream()
         .filter(i -> !i.getJourney().getJourneyDate().isAfter(req.getEffectiveTo()))
@@ -155,9 +140,9 @@ public class TrainCoachConfigService {
 
     List<CoachConfigConflictItem> conflicts = new ArrayList<>();
     for (JourneySeatInventoryEntity row : inventoryRows) {
-      boolean hasBookings = row.getBookedConfirmed() > 0 ||
-        row.getBookedRac()        > 0 ||
-        row.getBookedWaitlist()   > 0;
+      boolean hasBookings = row.getBookedConfirmed() > 0
+        || row.getBookedRac()      > 0
+        || row.getBookedWaitlist() > 0;
       if (hasBookings) {
         conflicts.add(CoachConfigConflictItem.builder()
           .journeyId(row.getJourney().getJourneyId())
@@ -178,7 +163,7 @@ public class TrainCoachConfigService {
         .build();
     }
 
-    // Close the row
+    // ── Apply: set effectiveTo = effectiveFrom - 1, mark inactive ─────────
     coach.setEffectiveTo(req.getEffectiveFrom().minusDays(1));
     coach.setIsActive(false);
     coach.setChangeReason(req.getChangeReason());
@@ -196,9 +181,41 @@ public class TrainCoachConfigService {
     return CoachConfigChangeResponse.builder()
       .success(true)
       .message("Coach deactivated from " + req.getEffectiveFrom().format(DATE_FMT) +
-        (req.getEffectiveTo() != null ? " to " + req.getEffectiveTo().format(DATE_FMT) : " onwards") +
+        (req.getEffectiveTo() != null
+          ? " to " + req.getEffectiveTo().format(DATE_FMT)
+          : " onwards") +
         ". " + deleted + " future inventory rows removed.")
       .affectedJourneys(deleted)
+      .build();
+  }
+
+  // ── Reactivate ────────────────────────────────────────────────────────────
+  // Finds the inactive row, sets effectiveFrom = given date, effectiveTo = null.
+  // isActive = true. History is preserved — just updating the row's date range.
+  @Transactional
+  public CoachConfigChangeResponse reactivate(String trainNumber, Long coachId,
+                                              ReactivateCoachRequest req) {
+    TrainEntity      train = findTrain(trainNumber);
+    TrainCoachEntity coach = findCoach(coachId, train.getTrainId());
+
+    if (Boolean.TRUE.equals(coach.getIsActive()))
+      throw new BaseException(HttpStatus.BAD_REQUEST, "COACH_ALREADY_ACTIVE",
+        "Coach is already active.");
+
+    coach.setEffectiveFrom(req.getEffectiveFrom());
+    coach.setEffectiveTo(null);
+    coach.setIsActive(true);
+    coach.setChangeReason(req.getChangeReason());
+    coach.setUpdatedBy(SecurityUtils.getCurrentAdminId());
+    trainCoachRepository.save(coach);
+
+    log.info("Coach {} reactivated for train {} from {}",
+      coachId, trainNumber, req.getEffectiveFrom());
+
+    return CoachConfigChangeResponse.builder()
+      .success(true)
+      .message("Coach reactivated from " + req.getEffectiveFrom().format(DATE_FMT) + ".")
+      .affectedJourneys(0)
       .build();
   }
 
@@ -224,20 +241,20 @@ public class TrainCoachConfigService {
 
       if (row.getQuotaType() == QuotaType.GENERAL) {
         if (row.getBookedConfirmed() > newTotalSeats)
-          conflicts.add(conflict(jid, date, "confirmedSeats", row.getBookedConfirmed(), newTotalSeats));
-
+          conflicts.add(conflict(jid, date, "confirmedSeats",
+            row.getBookedConfirmed(), newTotalSeats));
         if (row.getTotalRac() != null && row.getBookedRac() > newTotalRac)
-          conflicts.add(conflict(jid, date, "racSeats", row.getBookedRac(), newTotalRac));
-
+          conflicts.add(conflict(jid, date, "racSeats",
+            row.getBookedRac(), newTotalRac));
         if (row.getWaitlistLimit() != null && row.getBookedWaitlist() > newWaitlist)
-          conflicts.add(conflict(jid, date, "waitlistLimit", row.getBookedWaitlist(), newWaitlist));
-
+          conflicts.add(conflict(jid, date, "waitlistLimit",
+            row.getBookedWaitlist(), newWaitlist));
       } else if (row.getQuotaType() == QuotaType.TATKAL) {
         if (row.getBookedConfirmed() > newTotalTatkal)
-          conflicts.add(conflict(jid, date, "tatkalSeats", row.getBookedConfirmed(), newTotalTatkal));
+          conflicts.add(conflict(jid, date, "tatkalSeats",
+            row.getBookedConfirmed(), newTotalTatkal));
       }
     }
-
     return conflicts;
   }
 
@@ -249,6 +266,7 @@ public class TrainCoachConfigService {
       .build();
   }
 
+  // ── Validators ────────────────────────────────────────────────────────────
   private void validateDateRange(LocalDate from, LocalDate to) {
     if (to != null && !to.isAfter(from))
       throw new BaseException(HttpStatus.BAD_REQUEST, "INVALID_DATE_RANGE",
@@ -267,6 +285,7 @@ public class TrainCoachConfigService {
         "Tatkal (" + tatkal + ") + RAC (" + rac + ") exceeds seats per coach (" + total + ").");
   }
 
+  // ── Finders ───────────────────────────────────────────────────────────────
   private TrainEntity findTrain(String trainNumber) {
     return trainRepository.findByTrainNumber(trainNumber.trim())
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "TRAIN_NOT_FOUND",

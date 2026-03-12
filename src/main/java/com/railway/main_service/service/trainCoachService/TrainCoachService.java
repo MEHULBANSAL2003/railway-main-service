@@ -10,21 +10,23 @@ import java.util.List;
 
 public interface TrainCoachService {
 
-  // Add a coach type to a train
   TrainCoachResponse addCoach(String trainNumber, AddTrainCoachRequest request);
 
-  // Update count / tatkalSeats — coachType is immutable
   TrainCoachResponse updateCoach(String trainNumber, Long coachId, UpdateTrainCoachRequest request);
 
-  // Soft toggle
   TrainCoachResponse toggleStatus(String trainNumber, Long coachId, boolean isActive);
 
-  // All coaches for a train (sub-page load)
+  // Active coaches today (effectiveFrom <= today <= effectiveTo or null)
   List<TrainCoachResponse> getAllByTrain(String trainNumber);
+
+  // Deactivated coaches (effectiveTo in the past)
+  List<TrainCoachResponse> getInactiveByTrain(String trainNumber);
 
   List<CoachTypeDropdownResponse> getAvailableCoachTypes(String trainNumber);
 
   TrainCopyCoachesResponse copyCoaches(String sourceTrainNumber, String targetTrainNumber);
 
   List<TrainCoachResponse> getCoachHistory(String trainNumber, String coachTypeCode);
+
+  List<TrainCoachResponse> getAllByTrainIncludingInactive(String trainNumber);
 }

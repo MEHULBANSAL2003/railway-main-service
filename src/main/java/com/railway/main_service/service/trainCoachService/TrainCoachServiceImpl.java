@@ -29,21 +29,18 @@ import java.util.List;
 @Service @Loggable @Slf4j @RequiredArgsConstructor
 public class TrainCoachServiceImpl implements TrainCoachService {
 
-  private final TrainCoachRepository trainCoachRepository;
-  private final TrainRepository      trainRepository;
-  private final CoachTypeRepository  coachTypeRepository;
+  private final TrainCoachRepository     trainCoachRepository;
+  private final TrainRepository          trainRepository;
+  private final CoachTypeRepository      coachTypeRepository;
   private final TrainTypeCoachRepository trainTypeCoachRepository;
-  private final InventoryInitService inventoryInitService;
+  private final InventoryInitService     inventoryInitService;
 
-  // ── Add ───────────────────────────────────────────────────────────────────
   @Override
   @Transactional
   public TrainCoachResponse addCoach(String trainNumber, AddTrainCoachRequest req) {
-
     TrainEntity     train     = findActiveTrain(trainNumber);
     CoachTypeEntity coachType = findActiveCoachType(req.getCoachTypeCode());
 
-    // Block if an open-ended (currently active) row already exists for this type
     if (trainCoachRepository.existsActiveRowByTrainAndCoachType(
       train.getTrainId(), coachType.getTypeId()))
       throw new BaseException(HttpStatus.CONFLICT, "COACH_ALREADY_EXISTS",
@@ -72,15 +69,10 @@ public class TrainCoachServiceImpl implements TrainCoachService {
       .build();
 
     TrainCoachEntity saved = trainCoachRepository.save(entity);
-
-    // Init inventory for all future journeys from effectiveFrom onwards
-    // that don't yet have inventory for this coach type
     inventoryInitService.initForNewCoach(saved);
-
     return toResponse(saved, "Coach added successfully.");
   }
 
-  // ── Update ────────────────────────────────────────────────────────────────
   @Override
   @Transactional
   public TrainCoachResponse updateCoach(String trainNumber, Long coachId,
@@ -89,10 +81,10 @@ public class TrainCoachServiceImpl implements TrainCoachService {
     TrainCoachEntity e     = findCoach(coachId, train.getTrainId());
     int totalSeats = e.getCoachType().getTotalSeats();
 
-    if (req.getCoachCount()   != null) e.setCoachCount(req.getCoachCount());
+    if (req.getCoachCount() != null) e.setCoachCount(req.getCoachCount());
 
-    int newTatkal = req.getTatkalSeats()  != null ? req.getTatkalSeats()  : e.getTatkalSeats();
-    int newRac    = req.getRacSeats()     != null ? req.getRacSeats()     : e.getRacSeats();
+    int newTatkal = req.getTatkalSeats() != null ? req.getTatkalSeats() : e.getTatkalSeats();
+    int newRac    = req.getRacSeats()    != null ? req.getRacSeats()    : e.getRacSeats();
 
     validatePerCoachQuotas(newTatkal, newRac, totalSeats, e.getCoachType().getTypeCode());
 
@@ -100,30 +92,34 @@ public class TrainCoachServiceImpl implements TrainCoachService {
     e.setRacSeats(newRac);
     if (req.getWaitlistLimit() != null) e.setWaitlistLimit(req.getWaitlistLimit());
     e.setUpdatedBy(SecurityUtils.getCurrentAdminId());
-
     return toResponse(trainCoachRepository.save(e), "Coach updated successfully.");
   }
 
-  // ── Toggle ────────────────────────────────────────────────────────────────
   @Override
   @Transactional
   public TrainCoachResponse toggleStatus(String trainNumber, Long coachId, boolean isActive) {
     TrainEntity      train = findActiveTrain(trainNumber);
     TrainCoachEntity e     = findCoach(coachId, train.getTrainId());
-
     if (e.getIsActive().equals(isActive)) return toResponse(e, null);
     e.setIsActive(isActive);
     e.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     trainCoachRepository.save(e);
-
     return toResponse(e, isActive ? "Coach activated." : "Coach deactivated.");
   }
 
-  // ── Get all ───────────────────────────────────────────────────────────────
   @Override
   public List<TrainCoachResponse> getAllByTrain(String trainNumber) {
     TrainEntity train = findTrainByNumber(trainNumber);
-    return trainCoachRepository.findCurrentByTrainId(train.getTrainId(), LocalDate.now())
+    return trainCoachRepository
+      .findCurrentByTrainId(train.getTrainId(), LocalDate.now())
+      .stream().map(e -> toResponse(e, null)).toList();
+  }
+
+  @Override
+  public List<TrainCoachResponse> getInactiveByTrain(String trainNumber) {
+    TrainEntity train = findTrainByNumber(trainNumber);
+    return trainCoachRepository
+      .findInactiveByTrainId(train.getTrainId(), LocalDate.now())
       .stream().map(e -> toResponse(e, null)).toList();
   }
 
@@ -134,8 +130,6 @@ public class TrainCoachServiceImpl implements TrainCoachService {
       .findHistoryByTrainIdAndTypeCode(train.getTrainId(), coachTypeCode.toUpperCase())
       .stream().map(e -> toResponse(e, null)).toList();
   }
-
-  // ── Private helpers ───────────────────────────────────────────────────────
 
   private TrainEntity findActiveTrain(String trainNumber) {
     TrainEntity train = findTrainByNumber(trainNumber);
@@ -167,8 +161,6 @@ public class TrainCoachServiceImpl implements TrainCoachService {
         "Coach not found on this train."));
   }
 
-  // tatkal + rac combined must not exceed total seats per coach
-  // (a seat can't be both tatkal and RAC simultaneously)
   private void validatePerCoachQuotas(int tatkal, int rac, int total, String typeCode) {
     if (tatkal > total)
       throw new BaseException(HttpStatus.BAD_REQUEST, "TATKAL_EXCEEDS_TOTAL",
@@ -184,10 +176,13 @@ public class TrainCoachServiceImpl implements TrainCoachService {
           " exceeds total seats per coach (" + total + ") for type '" + typeCode + "'.");
   }
 
-  // ── Mapper ────────────────────────────────────────────────────────────────
+  // isActive is DERIVED from dates — not the DB flag
   private TrainCoachResponse toResponse(TrainCoachEntity e, String message) {
     int totalSeats = e.getCoachType().getTotalSeats();
     int count      = e.getCoachCount();
+    LocalDate today = LocalDate.now();
+    boolean derivedActive = !e.getEffectiveFrom().isAfter(today)
+      && (e.getEffectiveTo() == null || !e.getEffectiveTo().isBefore(today));
 
     return TrainCoachResponse.builder()
       .coachId(e.getCoachId())
@@ -209,7 +204,7 @@ public class TrainCoachServiceImpl implements TrainCoachService {
       .effectiveFrom(e.getEffectiveFrom())
       .effectiveTo(e.getEffectiveTo())
       .changeReason(e.getChangeReason())
-      .isActive(e.getIsActive())
+      .isActive(derivedActive)
       .createdBy(e.getCreatedBy())
       .updatedBy(e.getUpdatedBy())
       .createdAt(e.getCreatedAt())
@@ -222,26 +217,17 @@ public class TrainCoachServiceImpl implements TrainCoachService {
   public List<CoachTypeDropdownResponse> getAvailableCoachTypes(String trainNumber) {
     TrainEntity train = findTrainByNumber(trainNumber);
 
-    // Step 1 — which coach types are allowed for this train's type?
     List<Long> allowedIds = trainTypeCoachRepository
       .findAllowedCoachTypeIds(train.getTrainType().getTypeId());
+    if (allowedIds.isEmpty()) return List.of();
 
-    if (allowedIds.isEmpty()) {
-      // No allowed coaches configured for this train type yet
-      // Return empty — forces admin to configure train type first
-      return List.of();
-    }
-
-    // Step 2 — which of those are already added to this train?
     List<Long> usedIds = trainCoachRepository
       .findUsedCoachTypeIdsByTrainId(train.getTrainId());
 
-    // Step 3 — allowed AND active AND not already added
     List<Long> availableIds = allowedIds.stream()
       .filter(id -> !usedIds.contains(id))
       .toList();
-
-    if (availableIds.isEmpty()) return List.of(); // all allowed types already added
+    if (availableIds.isEmpty()) return List.of();
 
     return coachTypeRepository.findAllByTypeIdInAndIsActiveTrue(availableIds).stream()
       .sorted(Comparator.comparing(CoachTypeEntity::getTypeCode))
@@ -255,47 +241,36 @@ public class TrainCoachServiceImpl implements TrainCoachService {
       .toList();
   }
 
-  // ── Add this method to TrainCoachServiceImpl ──────────────────────────────────
-
   @Override
   @Transactional
   public TrainCopyCoachesResponse copyCoaches(String sourceTrainNumber,
                                               String targetTrainNumber) {
-
-    // ── 1. Cannot copy to self ────────────────────────────────────────────────
-    if (sourceTrainNumber.trim().equalsIgnoreCase(targetTrainNumber.trim())) {
+    if (sourceTrainNumber.trim().equalsIgnoreCase(targetTrainNumber.trim()))
       throw new BaseException(HttpStatus.BAD_REQUEST, "COPY_SAME_TRAIN",
         "Source and target train cannot be the same.");
-    }
 
-    // ── 2. Validate both trains exist and are active ──────────────────────────
     TrainEntity source = findActiveTrain(sourceTrainNumber);
     TrainEntity target = findActiveTrain(targetTrainNumber);
 
-    // ── 3. Source must have coaches to copy ───────────────────────────────────
     List<TrainCoachEntity> sourceCoaches =
       trainCoachRepository.findAllByTrainId(source.getTrainId());
 
-    if (sourceCoaches.isEmpty()) {
+    if (sourceCoaches.isEmpty())
       throw new BaseException(HttpStatus.BAD_REQUEST, "SOURCE_HAS_NO_COACHES",
         "Train " + sourceTrainNumber + " has no coaches configured. Nothing to copy.");
-    }
 
-    // ── 4. Target must have NO coaches (bookings may exist) ───────────────────
     int targetCoachCount = trainCoachRepository.countByTrain_TrainId(target.getTrainId());
-    if (targetCoachCount > 0) {
+    if (targetCoachCount > 0)
       throw new BaseException(HttpStatus.CONFLICT, "TARGET_HAS_COACHES",
         "Train " + targetTrainNumber + " already has " + targetCoachCount +
           " coach type(s) configured. Cannot overwrite — bookings may already exist.");
-    }
 
-    // ── 5. Copy each coach row ─────────────────────────────────────────────────
     Long adminId = SecurityUtils.getCurrentAdminId();
 
     List<TrainCoachEntity> copied = sourceCoaches.stream()
       .map(src -> TrainCoachEntity.builder()
         .train(target)
-        .coachType(src.getCoachType())   // same coach type entity reference
+        .coachType(src.getCoachType())
         .coachCount(src.getCoachCount())
         .tatkalSeats(src.getTatkalSeats())
         .racSeats(src.getRacSeats())
@@ -306,21 +281,23 @@ public class TrainCoachServiceImpl implements TrainCoachService {
       .toList();
 
     List<TrainCoachEntity> saved = trainCoachRepository.saveAll(copied);
-
     log.info("Copied {} coach types from train {} to train {}",
       saved.size(), sourceTrainNumber, targetTrainNumber);
-
-    List<TrainCoachResponse> responses = saved.stream()
-      .map(e -> toResponse(e, null))
-      .toList();
 
     return TrainCopyCoachesResponse.builder()
       .sourceTrainNumber(sourceTrainNumber)
       .targetTrainNumber(targetTrainNumber)
       .copiedCount(saved.size())
-      .coaches(responses)
+      .coaches(saved.stream().map(e -> toResponse(e, null)).toList())
       .message("Successfully copied " + saved.size() + " coach type(s) from train " +
         sourceTrainNumber + " to train " + targetTrainNumber + ".")
       .build();
+  }
+
+  @Override
+  public List<TrainCoachResponse> getAllByTrainIncludingInactive(String trainNumber) {
+    TrainEntity train = findTrainByNumber(trainNumber);
+    return trainCoachRepository.findAllWithHistoryByTrainId(train.getTrainId())
+      .stream().map(e -> toResponse(e, null)).toList();
   }
 }
