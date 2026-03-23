@@ -23,10 +23,6 @@ public class QuotaEntity {
   @Column(name = "description", length = 255)
   private String description;
 
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
-
   @Column(name = "created_by")
   private Long createdBy;
 

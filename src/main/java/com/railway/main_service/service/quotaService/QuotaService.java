@@ -1,7 +1,11 @@
 package com.railway.main_service.service.quotaService;
 
+import com.railway.main_service.dto.request.ActivateRequest;
+import com.railway.main_service.dto.request.DeactivateRequest;
 import com.railway.main_service.dto.request.quota.AddQuotaRequest;
 import com.railway.main_service.dto.request.quota.UpdateQuotaRequest;
+import com.railway.main_service.dto.response.DeactivationResponse;
+import com.railway.main_service.dto.response.PeriodResponse;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.quota.QuotaResponse;
 
@@ -9,14 +13,19 @@ import java.util.List;
 
 public interface QuotaService {
 
-  public QuotaResponse addQuota(AddQuotaRequest request);
+  QuotaResponse addQuota(AddQuotaRequest request);
 
-  public QuotaResponse updateQuota(String quotaCode, UpdateQuotaRequest request);
+  QuotaResponse updateQuota(String quotaCode, UpdateQuotaRequest request);
 
-  public QuotaResponse toggleStatus(String quotaCode, boolean isActive);
+  DeactivationResponse deactivate(String quotaCode, DeactivateRequest request);
 
-  public List<QuotaResponse> getAllForDropdown();
+  DeactivationResponse activate(String quotaCode, ActivateRequest request);
 
-  public List<QuotaResponse> getAllForAdmin();
-  public CascadeInfoResponse getCascadeInfo(String quotaCode);
+  List<PeriodResponse> getPeriods(String quotaCode);
+
+  List<QuotaResponse> getAllForDropdown();
+
+  List<QuotaResponse> getAllForAdmin();
+
+  CascadeInfoResponse getCascadeInfo(String quotaCode);
 }

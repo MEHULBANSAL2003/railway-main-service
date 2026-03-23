@@ -3,19 +3,19 @@ package com.railway.main_service.service.trainService;
 import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
+import com.railway.main_service.dto.request.ActivateRequest;
+import com.railway.main_service.dto.request.DeactivateRequest;
 import com.railway.main_service.dto.request.train.AddTrainRequest;
 import com.railway.main_service.dto.request.train.UpdateTrainRequest;
+import com.railway.main_service.dto.response.DeactivationResponse;
 import com.railway.main_service.dto.response.PageResponse;
+import com.railway.main_service.dto.response.PeriodResponse;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.train.BulkUploadResponse;
 import com.railway.main_service.dto.response.train.ReturnTrainResponse;
 import com.railway.main_service.dto.response.train.TrainResponse;
-import com.railway.main_service.entity.TrainEntity;
-import com.railway.main_service.entity.TrainTypeEntity;
-import com.railway.main_service.entity.ZoneEntity;
-import com.railway.main_service.repository.TrainRepository;
-import com.railway.main_service.repository.TrainTypeRepository;
-import com.railway.main_service.repository.ZoneRepository;
+import com.railway.main_service.entity.*;
+import com.railway.main_service.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -28,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,9 +40,15 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class TrainServiceImpl implements TrainService {
 
-  private final TrainRepository     trainRepository;
-  private final TrainTypeRepository trainTypeRepository;
-  private final ZoneRepository      zoneRepository;
+  private final TrainRepository                trainRepository;
+  private final TrainTypeRepository            trainTypeRepository;
+  private final ZoneRepository                 zoneRepository;
+  private final TrainPeriodRepository          trainPeriodRepository;
+  private final TrainTypePeriodRepository      trainTypePeriodRepository;
+  private final TrainCoachRepository           trainCoachRepository;
+  private final TrainScheduleRepository        trainScheduleRepository;
+  private final JourneyRepository              journeyRepository;
+  private final JourneySeatInventoryRepository journeySeatInventoryRepository;
 
   // ── Add ───────────────────────────────────────────────────────────────────
   @Override
@@ -57,17 +64,20 @@ public class TrainServiceImpl implements TrainService {
       throw new BaseException(HttpStatus.CONFLICT, "TRAIN_NUMBER_EXISTS",
         "Train number '" + trainNumber + "' already exists.");
 
-
-
     TrainTypeEntity trainType = trainTypeRepository.findByTypeCode(typeCode)
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "TRAIN_TYPE_NOT_FOUND",
         "Train type not found: " + typeCode));
 
-    if (!trainType.getIsActive())
+    LocalDate today = LocalDate.now();
+
+    // Validate train type is active using period-based check
+    if (!trainTypePeriodRepository.isActiveOnDate(trainType.getTypeId(), today))
       throw new BaseException(HttpStatus.BAD_REQUEST, "TRAIN_TYPE_INACTIVE",
         "Train type '" + typeCode + "' is inactive.");
 
     ZoneEntity zone = findActiveZone(zoneCode);
+
+    Long adminId = SecurityUtils.getCurrentAdminId();
 
     TrainEntity entity = TrainEntity.builder()
       .trainNumber(trainNumber)
@@ -75,10 +85,22 @@ public class TrainServiceImpl implements TrainService {
       .trainType(trainType)
       .zone(zone)
       .pantrycar(request.getPantrycar())
-      .createdBy(SecurityUtils.getCurrentAdminId())
+      .createdBy(adminId)
       .build();
 
-    return toResponse(trainRepository.save(entity), "Train added successfully.");
+    TrainEntity saved = trainRepository.save(entity);
+
+    // Create initial active period: effectiveFrom=today, effectiveTill=null
+    TrainPeriodEntity initialPeriod = TrainPeriodEntity.builder()
+      .train(saved)
+      .effectiveFrom(today)
+      .effectiveTill(null)
+      .reason("Train created")
+      .createdBy(adminId)
+      .build();
+    trainPeriodRepository.save(initialPeriod);
+
+    return toResponse(saved, "Train added successfully.");
   }
 
   // ── Update ────────────────────────────────────────────────────────────────
@@ -88,7 +110,7 @@ public class TrainServiceImpl implements TrainService {
 
     TrainEntity entity = findByNumber(trainNumber);
 
-    if(request.getTrainName()!= null && !request.getTrainName().isBlank()){
+    if (request.getTrainName() != null && !request.getTrainName().isBlank()) {
       entity.setTrainName(request.getTrainName());
     }
 
@@ -104,37 +126,276 @@ public class TrainServiceImpl implements TrainService {
     return toResponse(trainRepository.save(entity), "Train updated successfully.");
   }
 
-  // ── Toggle Status ─────────────────────────────────────────────────────────
+  // ── Deactivate ────────────────────────────────────────────────────────────
   @Override
   @Transactional
-  public TrainResponse toggleStatus(String trainNumber, boolean isActive) {
+  public DeactivationResponse deactivate(String trainNumber, DeactivateRequest request) {
+
     TrainEntity entity = findByNumber(trainNumber);
+    Long trainId       = entity.getTrainId();
+    Long adminId       = SecurityUtils.getCurrentAdminId();
+    LocalDate today    = LocalDate.now();
+    LocalDate fromDate = request.getFromDate();
+    LocalDate tillDate = request.getTillDate();
 
-    if (entity.getIsActive().equals(isActive))
-      return toResponse(entity, null);
+    // a. Validate fromDate >= today
+    if (fromDate.isBefore(today))
+      throw new BaseException(HttpStatus.BAD_REQUEST, "INVALID_FROM_DATE",
+        "fromDate cannot be in the past.");
 
-    entity.setIsActive(isActive);
-    entity.setUpdatedBy(SecurityUtils.getCurrentAdminId());
-    trainRepository.save(entity);
+    // b. Validate tillDate > fromDate if provided
+    if (tillDate != null && !tillDate.isAfter(fromDate))
+      throw new BaseException(HttpStatus.BAD_REQUEST, "INVALID_TILL_DATE",
+        "tillDate must be after fromDate.");
 
-    String message = isActive
-      ? "Train activated. Coaches and schedules were NOT auto-reactivated — re-enable them manually."
-      : "Train deactivated.";
-    return toResponse(entity, message);
+    // c. Close current open period: set effectiveTill = fromDate - 1
+    LocalDate closingDate = fromDate.minusDays(1);
+    trainPeriodRepository.closeOpenPeriod(trainId, closingDate);
+
+    // d. If tillDate provided (temporary deactivation): create future reactivation period
+    if (tillDate != null) {
+      TrainPeriodEntity futurePeriod = TrainPeriodEntity.builder()
+        .train(entity)
+        .effectiveFrom(tillDate.plusDays(1))
+        .effectiveTill(null)
+        .reason("Auto-reactivation after temporary deactivation")
+        .createdBy(adminId)
+        .build();
+      trainPeriodRepository.save(futurePeriod);
+    }
+
+    // e. Delete any future periods that would overlap
+    trainPeriodRepository.deleteFuturePeriods(trainId, fromDate);
+
+    // ── CASCADE ──────────────────────────────────────────────────────────
+
+    List<String> warnings = new ArrayList<>();
+
+    // f. Close TrainCoaches: set effectiveTo = fromDate - 1 on coaches with open effectiveTo
+    List<TrainCoachEntity> openCoaches = trainCoachRepository.findActiveByTrainIdOnDate(trainId, fromDate);
+    int affectedCoaches = 0;
+    for (TrainCoachEntity coach : openCoaches) {
+      if (coach.getEffectiveTo() == null || coach.getEffectiveTo().isAfter(closingDate)) {
+        coach.setEffectiveTo(closingDate);
+        coach.setUpdatedBy(adminId);
+        affectedCoaches++;
+      }
+    }
+    if (!openCoaches.isEmpty()) {
+      trainCoachRepository.saveAll(openCoaches);
+    }
+
+    // g. Close TrainSchedules: set endDate = fromDate - 1 on running schedules
+    int affectedSchedules = 0;
+    // Close running schedule
+    Optional<TrainScheduleEntity> runningOpt = trainScheduleRepository.findRunning(trainId, fromDate);
+    if (runningOpt.isPresent()) {
+      TrainScheduleEntity running = runningOpt.get();
+      if (running.getEndDate() == null || running.getEndDate().isAfter(closingDate)) {
+        running.setEndDate(closingDate);
+        running.setUpdatedBy(adminId);
+        trainScheduleRepository.save(running);
+        affectedSchedules++;
+      }
+    }
+    // Close upcoming schedules by setting endDate to their startDate (effectively making them zero-length / cancelled)
+    List<TrainScheduleEntity> upcomingSchedules = trainScheduleRepository.findUpcoming(trainId, closingDate);
+    for (TrainScheduleEntity upcoming : upcomingSchedules) {
+      if (tillDate == null || upcoming.getStartDate().isBefore(tillDate) || upcoming.getStartDate().isEqual(tillDate)) {
+        upcoming.setEndDate(closingDate.isBefore(upcoming.getStartDate()) ? upcoming.getStartDate() : closingDate);
+        upcoming.setUpdatedBy(adminId);
+        affectedSchedules++;
+      }
+    }
+    if (!upcomingSchedules.isEmpty()) {
+      trainScheduleRepository.saveAll(upcomingSchedules);
+    }
+
+    // h. Cancel future Journeys from fromDate to tillDate (or all future if tillDate is null)
+    LocalDate cancelFrom = fromDate;
+    LocalDate cancelTo   = tillDate != null ? tillDate : fromDate.plusYears(1); // practical upper bound
+    List<JourneyEntity> journeysToCancel = journeyRepository.findByTrainAndDateRange(trainId, cancelFrom, cancelTo);
+
+    int cancelledJourneys   = 0;
+    int journeysWithBookings = 0;
+    String cancelReason = request.getReason() != null
+      ? "Train deactivated: " + request.getReason()
+      : "Train deactivated by admin";
+
+    for (JourneyEntity journey : journeysToCancel) {
+      if (!Boolean.TRUE.equals(journey.getIsCancelled())) {
+        journey.setIsCancelled(true);
+        journey.setCancelReason(cancelReason);
+        cancelledJourneys++;
+      }
+    }
+    if (!journeysToCancel.isEmpty()) {
+      journeyRepository.saveAll(journeysToCancel);
+    }
+
+    // i. Delete unbooked inventory for cancelled journeys
+    // j. Count journeys that have bookings — add to warnings
+    int deletedInventoryRows = 0;
+    for (JourneyEntity journey : journeysToCancel) {
+      List<JourneySeatInventoryEntity> inventoryRows =
+        journeySeatInventoryRepository.findByJourneyId(journey.getJourneyId());
+
+      boolean hasBookings = false;
+      List<JourneySeatInventoryEntity> toDelete = new ArrayList<>();
+
+      for (JourneySeatInventoryEntity inv : inventoryRows) {
+        boolean booked = (inv.getBookedConfirmed() != null && inv.getBookedConfirmed() > 0)
+          || (inv.getBookedRac() != null && inv.getBookedRac() > 0)
+          || (inv.getBookedWaitlist() != null && inv.getBookedWaitlist() > 0);
+
+        if (booked) {
+          hasBookings = true;
+        } else {
+          toDelete.add(inv);
+        }
+      }
+
+      if (hasBookings) {
+        journeysWithBookings++;
+        warnings.add("Journey on " + journey.getJourneyDate() + " has existing bookings — passengers must be notified.");
+      }
+
+      if (!toDelete.isEmpty()) {
+        journeySeatInventoryRepository.deleteAll(toDelete);
+        deletedInventoryRows += toDelete.size();
+      }
+    }
+
+    String message;
+    if (tillDate != null) {
+      message = "Train " + entity.getTrainNumber() + " deactivated from " + fromDate + " to " + tillDate
+        + ". Will auto-reactivate on " + tillDate.plusDays(1) + ". "
+        + cancelledJourneys + " journeys cancelled.";
+    } else {
+      message = "Train " + entity.getTrainNumber() + " deactivated from " + fromDate + " indefinitely. "
+        + cancelledJourneys + " journeys cancelled.";
+    }
+
+    return DeactivationResponse.builder()
+      .entityType("TRAIN")
+      .entityCode(entity.getTrainNumber())
+      .entityName(entity.getTrainName())
+      .action("DEACTIVATED")
+      .period(toPeriodResponse(
+        trainPeriodRepository.findActivePeriod(trainId, closingDate).orElse(null),
+        closingDate))
+      .affectedFareRules(0)
+      .affectedCoaches(affectedCoaches)
+      .affectedSchedules(affectedSchedules)
+      .cancelledJourneys(cancelledJourneys)
+      .deletedInventoryRows(deletedInventoryRows)
+      .warnings(warnings.isEmpty() ? null : warnings)
+      .message(message)
+      .build();
+  }
+
+  // ── Activate ──────────────────────────────────────────────────────────────
+  @Override
+  @Transactional
+  public DeactivationResponse activate(String trainNumber, ActivateRequest request) {
+
+    TrainEntity entity = findByNumber(trainNumber);
+    Long trainId       = entity.getTrainId();
+    Long adminId       = SecurityUtils.getCurrentAdminId();
+    LocalDate today    = LocalDate.now();
+    LocalDate fromDate = request.getFromDate();
+    LocalDate tillDate = request.getTillDate();
+
+    // a. Validate fromDate >= today
+    if (fromDate.isBefore(today))
+      throw new BaseException(HttpStatus.BAD_REQUEST, "INVALID_FROM_DATE",
+        "fromDate cannot be in the past.");
+
+    // b. Check no overlap with existing periods
+    LocalDate overlapTill = tillDate != null ? tillDate : fromDate.plusYears(100);
+    if (trainPeriodRepository.hasOverlap(trainId, fromDate, overlapTill, null))
+      throw new BaseException(HttpStatus.CONFLICT, "PERIOD_OVERLAP",
+        "The requested activation period overlaps with an existing period.");
+
+    // c. Create new period
+    TrainPeriodEntity newPeriod = TrainPeriodEntity.builder()
+      .train(entity)
+      .effectiveFrom(fromDate)
+      .effectiveTill(tillDate)
+      .reason(request.getReason() != null ? request.getReason() : "Train activated by admin")
+      .createdBy(adminId)
+      .build();
+    TrainPeriodEntity savedPeriod = trainPeriodRepository.save(newPeriod);
+
+    // d. Return DeactivationResponse with action=ACTIVATED
+    String message = "Train " + entity.getTrainNumber() + " activated from " + fromDate
+      + (tillDate != null ? " to " + tillDate : " indefinitely")
+      + ". You must manually: (1) add/reactivate coaches, (2) create schedule, (3) generate journeys.";
+
+    return DeactivationResponse.builder()
+      .entityType("TRAIN")
+      .entityCode(entity.getTrainNumber())
+      .entityName(entity.getTrainName())
+      .action("ACTIVATED")
+      .period(toPeriodResponse(savedPeriod, today))
+      .affectedFareRules(0)
+      .affectedCoaches(0)
+      .affectedSchedules(0)
+      .cancelledJourneys(0)
+      .deletedInventoryRows(0)
+      .warnings(null)
+      .message(message)
+      .build();
+  }
+
+  // ── Get Periods ───────────────────────────────────────────────────────────
+  @Override
+  public List<PeriodResponse> getPeriods(String trainNumber) {
+    TrainEntity entity = findByNumber(trainNumber);
+    LocalDate today = LocalDate.now();
+    List<TrainPeriodEntity> periods = trainPeriodRepository.findAllByTrainId(entity.getTrainId());
+    return periods.stream()
+      .map(p -> toPeriodResponse(p, today))
+      .toList();
   }
 
   // ── Cascade Info ──────────────────────────────────────────────────────────
   @Override
   public CascadeInfoResponse getCascadeInfo(String trainNumber) {
     TrainEntity entity = findByNumber(trainNumber);
-    // Will be updated when TrainCoaches + Schedules are built
+    Long trainId = entity.getTrainId();
+    LocalDate today = LocalDate.now();
+
+    boolean isActive = trainPeriodRepository.isActiveOnDate(trainId, today);
+    int coachCount = trainCoachRepository.countActiveByTrainIdOnDate(trainId, today);
+
+    // Count running + upcoming schedules
+    int scheduleCount = 0;
+    if (trainScheduleRepository.findRunning(trainId, today).isPresent()) {
+      scheduleCount++;
+    }
+    scheduleCount += trainScheduleRepository.findUpcoming(trainId, today).size();
+
+    // Count future non-cancelled journeys
+    List<JourneyEntity> futureJourneys = journeyRepository.findByTrainAndDateRange(
+      trainId, today, today.plusYears(1));
+    long journeyCount = futureJourneys.stream()
+      .filter(j -> !Boolean.TRUE.equals(j.getIsCancelled()))
+      .count();
+
+    StringBuilder msg = new StringBuilder();
+    if (coachCount > 0) msg.append(coachCount).append(" active coach(es). ");
+    if (scheduleCount > 0) msg.append(scheduleCount).append(" active/upcoming schedule(s). ");
+    if (journeyCount > 0) msg.append(journeyCount).append(" future journey(s). ");
+    if (msg.isEmpty()) msg.append("No linked records.");
+
     return CascadeInfoResponse.builder()
       .entityType("TRAIN")
       .entityCode(entity.getTrainNumber())
       .entityName(entity.getTrainName())
-      .currentlyActive(entity.getIsActive())
+      .currentlyActive(isActive)
       .activeFareRulesCount(0)
-      .message("No linked records yet.")
+      .message(msg.toString().trim())
       .build();
   }
 
@@ -155,12 +416,11 @@ public class TrainServiceImpl implements TrainService {
     String tc = blankToNull(trainTypeCode) != null ? trainTypeCode.trim().toUpperCase() : null;
     String zc = blankToNull(zoneCode)      != null ? zoneCode.trim().toUpperCase()      : null;
 
-    // Whitelist sort fields — reject anything not explicitly allowed
+    // Whitelist sort fields
     String safeSortBy = switch (sortBy != null ? sortBy.trim() : "") {
       case "trainName" -> "trainName";
-      case "isActive"  -> "isActive";
       case "pantrycar" -> "pantrycar";
-      default          -> "trainNumber"; // default sort
+      default          -> "trainNumber";
     };
 
     Sort sort = "desc".equalsIgnoreCase(sortDir)
@@ -169,15 +429,13 @@ public class TrainServiceImpl implements TrainService {
 
     // API is 1-based, Spring Data is 0-based
     int pageIndex = Math.max(0, page - 1);
-    int pageSize  = Math.max(1, Math.min(size, 100)); // cap at 100 per page
+    int pageSize  = Math.max(1, Math.min(size, 100));
 
     Pageable pageable = PageRequest.of(pageIndex, pageSize, sort);
 
-    Page<TrainEntity> result = trainRepository.findAllForAdminPaged(tc, zc, isActive, s, pageable);
+    LocalDate today = LocalDate.now();
+    Page<TrainEntity> result = trainRepository.findAllForAdminPaged(tc, zc, isActive, s, today, pageable);
 
-    // Page result uses regular JOIN (not FETCH) to avoid HHH90003004.
-    // trainType and zone are lazily loaded per entity here.
-    // For production scale, consider @EntityGraph or a batch fetch size hint.
     return PageResponse.<TrainResponse>builder()
       .content(result.getContent().stream().map(e -> toResponse(e, null)).toList())
       .totalElements(result.getTotalElements())
@@ -192,7 +450,8 @@ public class TrainServiceImpl implements TrainService {
   // ── Dropdown ──────────────────────────────────────────────────────────────
   @Override
   public List<TrainResponse> getAllForDropdown(String search) {
-    return trainRepository.findActiveForDropdown(blankToNull(search))
+    LocalDate today = LocalDate.now();
+    return trainRepository.findActiveForDropdown(blankToNull(search), today)
       .stream().map(e -> toResponse(e, null)).toList();
   }
 
@@ -209,11 +468,11 @@ public class TrainServiceImpl implements TrainService {
     int number = Integer.parseInt(trimmed);
 
     // Indian Railways convention: trains run in pairs
-    //   odd  number → return is number + 1  (e.g. 12951 → 12952)
-    //   even number → return is number - 1  (e.g. 12952 → 12951)
+    //   odd  number -> return is number + 1  (e.g. 12951 -> 12952)
+    //   even number -> return is number - 1  (e.g. 12952 -> 12951)
     int returnNumber = (number % 2 != 0) ? number + 1 : number - 1;
 
-    // Guard: must stay in valid 5-digit range (10000–99999)
+    // Guard: must stay in valid 5-digit range (10000-99999)
     if (returnNumber < 10000 || returnNumber > 99999) {
       return ReturnTrainResponse.builder()
         .returnTrainNumber(null)
@@ -253,6 +512,8 @@ public class TrainServiceImpl implements TrainService {
     List<BulkUploadResponse.RowError> errors = new ArrayList<>();
     int successCount   = 0;
     int duplicateCount = 0;
+    LocalDate today    = LocalDate.now();
+    Long adminId       = SecurityUtils.getCurrentAdminId();
 
     try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
 
@@ -263,12 +524,12 @@ public class TrainServiceImpl implements TrainService {
 
       int lastRow = sheet.getLastRowNum();
 
-      // Row 0 = header — skip it. Data starts at row 1 (0-based) = row 2 in Excel (1-based display)
+      // Row 0 = header -- skip it. Data starts at row 1 (0-based) = row 2 in Excel (1-based display)
       for (int i = 1; i <= lastRow; i++) {
         Row row = sheet.getRow(i);
-        if (row == null || isRowBlank(row)) continue; // skip blank rows silently
+        if (row == null || isRowBlank(row)) continue;
 
-        int displayRow = i + 1; // 1-based for error messages
+        int displayRow = i + 1;
 
         String trainNumber   = getCellString(row, 0).trim();
         String trainName     = getCellString(row, 1).trim();
@@ -295,7 +556,6 @@ public class TrainServiceImpl implements TrainService {
           continue;
         }
 
-
         // ── Reference data validation ─────────────────────
         Optional<TrainTypeEntity> typeOpt = trainTypeRepository.findByTypeCode(trainTypeCode);
         if (typeOpt.isEmpty()) {
@@ -304,7 +564,8 @@ public class TrainServiceImpl implements TrainService {
             .reason("Train type '" + trainTypeCode + "' not found.").build());
           continue;
         }
-        if (!typeOpt.get().getIsActive()) {
+        // Period-based active check for train type
+        if (!trainTypePeriodRepository.isActiveOnDate(typeOpt.get().getTypeId(), today)) {
           errors.add(BulkUploadResponse.RowError.builder()
             .rowNumber(displayRow).trainNumber(trainNumber).trainName(trainName)
             .reason("Train type '" + trainTypeCode + "' is inactive.").build());
@@ -334,10 +595,21 @@ public class TrainServiceImpl implements TrainService {
           .trainType(typeOpt.get())
           .zone(zoneOpt.get())
           .pantrycar(pantrycar)
-          .createdBy(SecurityUtils.getCurrentAdminId())
+          .createdBy(adminId)
           .build();
 
-        trainRepository.save(entity);
+        TrainEntity saved = trainRepository.save(entity);
+
+        // Create initial active period for the new train
+        TrainPeriodEntity initialPeriod = TrainPeriodEntity.builder()
+          .train(saved)
+          .effectiveFrom(today)
+          .effectiveTill(null)
+          .reason("Train created via bulk upload")
+          .createdBy(adminId)
+          .build();
+        trainPeriodRepository.save(initialPeriod);
+
         successCount++;
       }
 
@@ -376,19 +648,19 @@ public class TrainServiceImpl implements TrainService {
 
       // ── Header style ──────────────────────────────────
       XSSFCellStyle headerStyle = workbook.createCellStyle();
-      headerStyle.setFillForegroundColor(new XSSFColor(new byte[]{(byte)30, (byte)64, (byte)175}, null)); // indigo-800
+      headerStyle.setFillForegroundColor(new XSSFColor(new byte[]{(byte) 30, (byte) 64, (byte) 175}, null));
       headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
       headerStyle.setAlignment(HorizontalAlignment.CENTER);
       headerStyle.setBorderBottom(BorderStyle.THIN);
       XSSFFont headerFont = workbook.createFont();
       headerFont.setBold(true);
-      headerFont.setColor(new XSSFColor(new byte[]{(byte)255, (byte)255, (byte)255}, null));
+      headerFont.setColor(new XSSFColor(new byte[]{(byte) 255, (byte) 255, (byte) 255}, null));
       headerFont.setFontHeightInPoints((short) 11);
       headerStyle.setFont(headerFont);
 
       // ── Example row style ─────────────────────────────
       XSSFCellStyle exampleStyle = workbook.createCellStyle();
-      exampleStyle.setFillForegroundColor(new XSSFColor(new byte[]{(byte)239, (byte)246, (byte)255}, null)); // blue-50
+      exampleStyle.setFillForegroundColor(new XSSFColor(new byte[]{(byte) 239, (byte) 246, (byte) 255}, null));
       exampleStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
       // ── Headers ───────────────────────────────────────
@@ -422,9 +694,9 @@ public class TrainServiceImpl implements TrainService {
         "INSTRUCTIONS FOR BULK TRAIN UPLOAD",
         "",
         "1. Fill data in the 'Trains' sheet starting from row 2.",
-        "2. Row 1 is the header — do not modify it.",
+        "2. Row 1 is the header -- do not modify it.",
         "3. Train Number: exactly 5 digits (e.g. 12951). Must be unique.",
-        "4. Train Name: 3–150 characters. Must be unique.",
+        "4. Train Name: 3-150 characters. Must be unique.",
         "5. Train Type Code: must match an existing active train type (e.g. RAJDHANI, EXPRESS).",
         "6. Zone Code: must match an existing active zone (e.g. NR, WR, SR, CR).",
         "7. Pantry Car: enter YES or NO (case-insensitive). Leave blank for NO.",
@@ -478,10 +750,10 @@ public class TrainServiceImpl implements TrainService {
     if (trainNumber.isBlank())   return "Train number is required.";
     if (!trainNumber.matches("^[0-9]{5}$")) return "Train number must be exactly 5 digits. Got: '" + trainNumber + "'.";
     if (trainName.isBlank())     return "Train name is required.";
-    if (trainName.length() < 3 || trainName.length() > 150) return "Train name must be 3–150 characters.";
+    if (trainName.length() < 3 || trainName.length() > 150) return "Train name must be 3-150 characters.";
     if (typeCode.isBlank())      return "Train type code is required.";
     if (zoneCode.isBlank())      return "Zone code is required.";
-    return null; // valid
+    return null;
   }
 
   private boolean isRowBlank(Row row) {
@@ -498,7 +770,6 @@ public class TrainServiceImpl implements TrainService {
     return switch (cell.getCellType()) {
       case STRING  -> cell.getStringCellValue();
       case NUMERIC -> {
-        // Excel may store numbers as NUMERIC — convert to string without decimal
         double val = cell.getNumericCellValue();
         yield String.valueOf((long) val);
       }
@@ -516,6 +787,12 @@ public class TrainServiceImpl implements TrainService {
   }
 
   private TrainResponse toResponse(TrainEntity e, String message) {
+    LocalDate today = LocalDate.now();
+    boolean isActive = trainPeriodRepository.isActiveOnDate(e.getTrainId(), today);
+
+    // Get current active period for effectiveFrom/effectiveTill display
+    Optional<TrainPeriodEntity> activePeriodOpt = trainPeriodRepository.findActivePeriod(e.getTrainId(), today);
+
     return TrainResponse.builder()
       .trainId(e.getTrainId())
       .trainNumber(e.getTrainNumber())
@@ -526,12 +803,39 @@ public class TrainServiceImpl implements TrainService {
       .zoneCode(e.getZone().getCode())
       .zoneName(e.getZone().getName())
       .pantrycar(e.getPantrycar())
-      .isActive(e.getIsActive())
+      .isActive(isActive)
+      .effectiveFrom(activePeriodOpt.map(TrainPeriodEntity::getEffectiveFrom).orElse(null))
+      .effectiveTill(activePeriodOpt.map(TrainPeriodEntity::getEffectiveTill).orElse(null))
       .createdBy(e.getCreatedBy())
       .updatedBy(e.getUpdatedBy())
       .createdAt(e.getCreatedAt())
       .updatedAt(e.getUpdatedAt())
       .message(message)
+      .build();
+  }
+
+  private PeriodResponse toPeriodResponse(TrainPeriodEntity p, LocalDate today) {
+    if (p == null) return null;
+
+    String status;
+    if (p.getEffectiveFrom().isAfter(today)) {
+      status = "UPCOMING";
+    } else if (p.getEffectiveTill() != null && p.getEffectiveTill().isBefore(today)) {
+      status = "PAST";
+    } else if (p.coversDate(today)) {
+      status = "ACTIVE";
+    } else {
+      status = "INACTIVE_GAP";
+    }
+
+    return PeriodResponse.builder()
+      .periodId(p.getPeriodId())
+      .effectiveFrom(p.getEffectiveFrom())
+      .effectiveTill(p.getEffectiveTill())
+      .status(status)
+      .reason(p.getReason())
+      .createdBy(p.getCreatedBy())
+      .createdAt(p.getCreatedAt())
       .build();
   }
 }

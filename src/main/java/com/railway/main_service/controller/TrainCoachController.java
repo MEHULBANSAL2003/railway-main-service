@@ -2,9 +2,13 @@ package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.DeactivateRequest;
+import com.railway.main_service.dto.request.ActivateRequest;
 import com.railway.main_service.dto.request.trainCoach.AddTrainCoachRequest;
 import com.railway.main_service.dto.request.trainCoach.CopyCoachesRequest;
 import com.railway.main_service.dto.request.trainCoach.UpdateTrainCoachRequest;
+import com.railway.main_service.dto.response.DeactivationResponse;
+import com.railway.main_service.dto.response.PeriodResponse;
 import com.railway.main_service.dto.response.trainCoach.CoachTypeDropdownResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCoachResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCopyCoachesResponse;
@@ -15,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -54,15 +59,15 @@ public class TrainCoachController {
       trainCoachService.updateCoach(trainNumber, coachId, request)));
   }
 
-  // PATCH /api/main/trains/{trainNumber}/coaches/{coachId}/status
-  @PostMapping(ApiConstants.TRAIN_COACH_STATUS)
+  // POST /api/main/trains/{trainNumber}/coaches/{coachId}/deactivate
+  @PostMapping(ApiConstants.DEACTIVATE_TRAIN_COACH)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<TrainCoachResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<DeactivationResponse>> deactivate(
     @PathVariable String trainNumber,
     @PathVariable Long coachId,
-    @RequestParam boolean isActive) {
+    @RequestBody @Valid DeactivateRequest request) {
     return ResponseEntity.ok(ApiResponse.success(
-      trainCoachService.toggleStatus(trainNumber, coachId, isActive)));
+      trainCoachService.deactivate(trainNumber, coachId, request)));
   }
 
   @GetMapping(ApiConstants.TRAIN_COACH_AVAILABLE_TYPES)

@@ -39,7 +39,7 @@ public class InventoryInitService {
     }
 
     List<TrainCoachEntity> coaches =
-      trainCoachRepository.findByTrain_TrainIdAndIsActiveTrue(trainId);
+      trainCoachRepository.findActiveByTrainIdOnDate(trainId, journey.getJourneyDate());
 
     if (coaches.isEmpty()) {
       log.warn("No active coaches for train {} — inventory not created for journey {}",

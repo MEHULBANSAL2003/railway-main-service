@@ -8,10 +8,8 @@ import java.util.List;
 
 public interface FareRuleService {
   FareRuleResponse addFareRule(AddFareRuleRequest request);
-  FareRuleResponse toggleStatus(Long ruleId, boolean isActive);
+  FareRuleResponse closeRule(Long ruleId, LocalDate endDate);
   List<FareRuleResponse> getAllForAdmin(String trainTypeCode, String coachTypeCode, String quotaCode);
-
   List<FareRuleResponse> getComboHistory(String trainTypeCode, String coachTypeCode, String quotaCode);
-
   FareRuleResponse getCurrentRule(String trainTypeCode, String coachTypeCode, String quotaCode, LocalDate date);
 }

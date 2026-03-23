@@ -51,6 +51,9 @@ public class ApiConstants {
   public static final String GET_TRAIN_TYPES_ADMIN = "/get/all/admin";
  public static final String UPDATE_TRAIN_TYPE = "/update/details/{typeCode}";
  public static final String CHANGE_STATUS = "/change/status/{typeCode}";
+  public static final String DEACTIVATE_TRAIN_TYPE = "/{typeCode}/deactivate";
+  public static final String ACTIVATE_TRAIN_TYPE = "/{typeCode}/activate";
+  public static final String TRAIN_TYPE_PERIODS = "/{typeCode}/periods";
   public static final String TRAIN_TYPE_ALLOWED_COACHES = "/allowed-coaches/{typeCode}";
 
  //coach types
@@ -59,10 +62,14 @@ public class ApiConstants {
   public static final String GET_COACH_TYPES_ADMIN = "/get/all/admin";
   public static final String UPDATE_COACH_TYPE = "/update/details/{typeCode}";
   public static final String CHANGE_STATUS_COACH_TYPE = "/change/status/{typeCode}";
+  public static final String DEACTIVATE_COACH_TYPE = "/{typeCode}/deactivate";
+  public static final String ACTIVATE_COACH_TYPE = "/{typeCode}/activate";
+  public static final String COACH_TYPE_PERIODS = "/{typeCode}/periods";
 
 // fare rules
   public static final String ADD_FARE_RULE          = "/add/new";
   public static final String FARE_RULE_STATUS       = "/change/status/{ruleId}";
+  public static final String CLOSE_FARE_RULE        = "/{ruleId}/close";
   public static final String GET_FARE_RULES_ADMIN   = "/all/admin";
   public static final String GET_FARE_RULE_HISTORY  = "/get/history";
   public static final String GET_CURRENT_FARE_RULE  = "/get/current";
@@ -72,6 +79,9 @@ public class ApiConstants {
   public static final String ADD_QUOTA            = "/add";
   public static final String UPDATE_QUOTA         = "/update/{quotaCode}";
   public static final String QUOTA_STATUS         = "/change/status/{quotaCode}";
+  public static final String DEACTIVATE_QUOTA     = "/{quotaCode}/deactivate";
+  public static final String ACTIVATE_QUOTA       = "/{quotaCode}/activate";
+  public static final String QUOTA_PERIODS        = "/{quotaCode}/periods";
   public static final String GET_QUOTAS_DROPDOWN  = "/get/all";
   public static final String GET_QUOTAS_ADMIN     = "/get/all/admin";
 
@@ -84,6 +94,9 @@ public class ApiConstants {
   public static final String ADD_TRAIN           = "/add";
   public static final String UPDATE_TRAIN        = "/update/details/{trainNumber}";
   public static final String TRAIN_STATUS        = "/change/status/{trainNumber}";
+  public static final String DEACTIVATE_TRAIN    = "/{trainNumber}/deactivate";
+  public static final String ACTIVATE_TRAIN      = "/{trainNumber}/activate";
+  public static final String TRAIN_PERIODS       = "/{trainNumber}/periods";
   public static final String TRAIN_CASCADE_INFO  = "/cascade-info/{trainNumber}";
   public static final String GET_TRAINS_ADMIN    = "/get/all/admin";
   public static final String GET_TRAINS_DROPDOWN = "/get/all";
@@ -98,6 +111,7 @@ public class ApiConstants {
   public static final String TRAIN_COACH_ADD    = "/add/new/{trainNumber}";
   public static final String TRAIN_COACH_UPDATE = "update/{trainNumber}/{coachId}";
   public static final String TRAIN_COACH_STATUS = "/change/status/{trainNumber}/{coachId}";
+  public static final String DEACTIVATE_TRAIN_COACH = "/{trainNumber}/coaches/{coachId}/deactivate";
   public static final String TRAIN_COACH_AVAILABLE_TYPES = "/available-types/{trainNumber}";
   public static final String TRAIN_COACH_COPY_COACHES = "/{trainNumber}/coaches/copy";
 
@@ -112,6 +126,8 @@ public class ApiConstants {
   public static final String BULK_GENERATE_TRAIN_JOURNEY = "/bulk-generate";
   public static final String ADD_TRAIN_JOURNEY = "/add";
   public static final String CANCEL_TRAIN_JOURNEY = "{journeyId}/cancel";
+  public static final String BULK_CANCEL_JOURNEYS = "/bulk-cancel";
+  public static final String DEACTIVATE_SCHEDULE = "/{scheduleId}/deactivate";
 
 
   private ApiConstants() {

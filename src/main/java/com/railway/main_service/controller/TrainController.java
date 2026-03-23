@@ -2,9 +2,13 @@ package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.ActivateRequest;
+import com.railway.main_service.dto.request.DeactivateRequest;
 import com.railway.main_service.dto.request.train.AddTrainRequest;
 import com.railway.main_service.dto.request.train.UpdateTrainRequest;
+import com.railway.main_service.dto.response.DeactivationResponse;
 import com.railway.main_service.dto.response.PageResponse;
+import com.railway.main_service.dto.response.PeriodResponse;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.train.BulkUploadResponse;
 import com.railway.main_service.dto.response.train.ReturnTrainResponse;
@@ -19,6 +23,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -45,12 +50,30 @@ public class TrainController {
     return ResponseEntity.ok(ApiResponse.success(trainService.updateTrain(trainNumber, request)));
   }
 
-  @PostMapping(ApiConstants.TRAIN_STATUS)
+  @PostMapping(ApiConstants.DEACTIVATE_TRAIN)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<TrainResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<DeactivationResponse>> deactivate(
     @PathVariable String trainNumber,
-    @RequestParam boolean isActive) {
-    return ResponseEntity.ok(ApiResponse.success(trainService.toggleStatus(trainNumber, isActive)));
+    @RequestBody @Valid DeactivateRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainService.deactivate(trainNumber, request)));
+  }
+
+  @PostMapping(ApiConstants.ACTIVATE_TRAIN)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<DeactivationResponse>> activate(
+    @PathVariable String trainNumber,
+    @RequestBody @Valid ActivateRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainService.activate(trainNumber, request)));
+  }
+
+  @GetMapping(ApiConstants.TRAIN_PERIODS)
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<List<PeriodResponse>>> getPeriods(
+    @PathVariable String trainNumber) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainService.getPeriods(trainNumber)));
   }
 
   // ── Queries ───────────────────────────────────────────────────────────────

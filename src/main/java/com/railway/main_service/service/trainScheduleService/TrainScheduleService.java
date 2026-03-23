@@ -1,17 +1,18 @@
 package com.railway.main_service.service.trainScheduleService;
 
+import com.railway.main_service.dto.request.DeactivateRequest;
 import com.railway.main_service.dto.request.trainSchedule.AddTrainScheduleRequest;
 import com.railway.main_service.dto.response.trainSchedule.TrainScheduleResponse;
 import com.railway.main_service.dto.response.trainSchedule.TrainScheduleSummaryResponse;
 
 public interface TrainScheduleService {
 
-  // Single summary call — running + upcoming + past + deactivated
+  // Single summary call — running + upcoming + past
   TrainScheduleSummaryResponse getSummary(String trainNumber);
 
   // Create new schedule
   TrainScheduleResponse createSchedule(String trainNumber, AddTrainScheduleRequest request);
 
-  // Toggle isActive on a schedule (cannot toggle RUNNING)
-  TrainScheduleResponse toggleSchedule(String trainNumber, Long scheduleId);
+  // Deactivate a schedule by setting endDate
+  TrainScheduleResponse deactivateSchedule(String trainNumber, Long scheduleId, DeactivateRequest request);
 }

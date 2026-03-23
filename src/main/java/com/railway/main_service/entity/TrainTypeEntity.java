@@ -1,19 +1,7 @@
 package com.railway.main_service.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
+import jakarta.persistence.*;
+import lombok.*;
 import java.time.LocalDateTime;
 
 @Getter
@@ -45,10 +33,6 @@ public class TrainTypeEntity {
   @Column(name = "is_superfast", nullable = false)
   @Builder.Default
   private Boolean isSuperfast = false;
-
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
 
   @Column(name = "created_by")
   private Long createdBy;

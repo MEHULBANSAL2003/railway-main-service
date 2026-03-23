@@ -37,7 +37,8 @@ public class JourneyServiceImpl implements JourneyService {
   private final TrainScheduleRepository scheduleRepository;
   private final TrainStopRepository     trainStopRepository;
   private final TrainCoachRepository    trainCoachRepository;
-  private final InventoryInitService inventoryInitService;
+  private final TrainPeriodRepository   trainPeriodRepository;
+  private final InventoryInitService    inventoryInitService;
 
   // ── Paginated list — all history, filtered ────────────────────────────────
 
@@ -109,8 +110,8 @@ public class JourneyServiceImpl implements JourneyService {
           .train(train).schedule(schedule).journeyDate(cursor)
           .isCancelled(false).chartPrepared(false).build();
         JourneyEntity saved = journeyRepository.save(j);
-      inventoryInitService.initForJourney(saved);
-      createdDates.add(cursor);
+        inventoryInitService.initForJourney(saved);
+        createdDates.add(cursor);
       } else { skipped++; }
       cursor = cursor.plusDays(1);
     }
@@ -176,6 +177,28 @@ public class JourneyServiceImpl implements JourneyService {
     log.info("Journey {} cancelled for train {}. Reason: {}", journeyId, trainNumber, request.getReason());
   }
 
+  // ── Bulk cancel from date ─────────────────────────────────────────────────
+
+  @Override
+  @Transactional
+  public int bulkCancelFromDate(String trainNumber, LocalDate fromDate, LocalDate toDate, String reason) {
+    TrainEntity train = findTrain(trainNumber);
+    LocalDate actualTo = toDate != null ? toDate : LocalDate.now().plusYears(1);
+    List<JourneyEntity> journeys = journeyRepository.findByTrainAndDateRange(
+      train.getTrainId(), fromDate, actualTo);
+    int count = 0;
+    for (JourneyEntity j : journeys) {
+      if (!Boolean.TRUE.equals(j.getIsCancelled())) {
+        j.setIsCancelled(true);
+        j.setCancelReason(reason);
+        count++;
+      }
+    }
+    journeyRepository.saveAll(journeys);
+    log.info("Bulk cancelled {} journeys for train {} from {} to {}", count, trainNumber, fromDate, actualTo);
+    return count;
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   private JourneyResponse createJourneyForDate(TrainEntity train, LocalDate date, String source) {
@@ -206,10 +229,11 @@ public class JourneyServiceImpl implements JourneyService {
   }
 
   private void validateTrainReady(TrainEntity train) {
+    LocalDate today = LocalDate.now();
     if (trainStopRepository.countByTrain_TrainId(train.getTrainId()) < 2)
       throw new BaseException(HttpStatus.BAD_REQUEST, "INSUFFICIENT_STOPS",
         "Train " + train.getTrainNumber() + " must have at least 2 stops");
-    if (trainCoachRepository.countByTrain_TrainIdAndIsActiveTrue(train.getTrainId()) == 0)
+    if (trainCoachRepository.countActiveByTrainIdOnDate(train.getTrainId(), today) == 0)
       throw new BaseException(HttpStatus.BAD_REQUEST, "NO_ACTIVE_COACHES",
         "Train " + train.getTrainNumber() + " must have at least one active coach");
   }

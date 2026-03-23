@@ -1,7 +1,11 @@
 package com.railway.main_service.service.coachTypeService;
 
+import com.railway.main_service.dto.request.ActivateRequest;
+import com.railway.main_service.dto.request.DeactivateRequest;
 import com.railway.main_service.dto.request.coachType.AddCoachTypeRequest;
 import com.railway.main_service.dto.request.coachType.UpdateCoachTypeRequest;
+import com.railway.main_service.dto.response.DeactivationResponse;
+import com.railway.main_service.dto.response.PeriodResponse;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.coachType.CoachTypeResponse;
 
@@ -9,17 +13,19 @@ import java.util.List;
 
 public interface CoachTypeService {
 
-  public CoachTypeResponse addCoachType(AddCoachTypeRequest request);
+  CoachTypeResponse addCoachType(AddCoachTypeRequest request);
 
-  public CoachTypeResponse updateCoachType(String typeCode, UpdateCoachTypeRequest request);
+  CoachTypeResponse updateCoachType(String typeCode, UpdateCoachTypeRequest request);
 
+  DeactivationResponse deactivate(String typeCode, DeactivateRequest request);
 
-  public CoachTypeResponse toggleStatus(String typeCode, boolean isActive);
+  DeactivationResponse activate(String typeCode, ActivateRequest request);
 
-  public List<CoachTypeResponse> getAllForDropdown(String search);
+  List<PeriodResponse> getPeriods(String typeCode);
 
-  public List<CoachTypeResponse> getAllForAdmin(String search);
+  List<CoachTypeResponse> getAllForDropdown(String search);
 
-  public CascadeInfoResponse getCascadeInfo(String typeCode);
+  List<CoachTypeResponse> getAllForAdmin(String search);
 
+  CascadeInfoResponse getCascadeInfo(String typeCode);
 }

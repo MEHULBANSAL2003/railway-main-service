@@ -66,7 +66,7 @@ public class JourneyGeneratorJob {
 
     // Skip if train not ready
     if (trainStopRepository.countByTrain_TrainId(train.getTrainId()) < 2) return false;
-    if (trainCoachRepository.countByTrain_TrainIdAndIsActiveTrue(train.getTrainId()) == 0) return false;
+    if (trainCoachRepository.countActiveByTrainIdOnDate(train.getTrainId(), targetDate) == 0) return false;
 
     JourneyEntity journey = JourneyEntity.builder()
       .train(train)

@@ -2,6 +2,7 @@ package com.railway.main_service.dto.response.trainCoach;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
@@ -35,6 +36,9 @@ public class TrainCoachResponse {
   // waitlistLimit is already a flat total — no derived needed
 
   private Boolean isActive;
+  private LocalDate effectiveFrom;
+  private LocalDate effectiveTill;
+
   private Long    createdBy;
   private Long    updatedBy;
   private LocalDateTime createdAt;

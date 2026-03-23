@@ -27,15 +27,12 @@ public class TrainEntity {
   @Column(name = "train_id")
   private Long trainId;
 
-  // Official Indian Railways train number — immutable after creation
   @Column(name = "train_number", nullable = false, length = 5)
   private String trainNumber;
 
-  // Display name shown to passengers on tickets, search results
   @Column(name = "train_name", nullable = false, length = 150)
   private String trainName;
 
-  // Drives fare rules and superfast charge logic
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(
     name         = "train_type_id",
@@ -44,7 +41,6 @@ public class TrainEntity {
   )
   private TrainTypeEntity trainType;
 
-  // Zone that operates this train — WR, CR, NR etc.
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(
     name         = "zone_id",
@@ -53,14 +49,9 @@ public class TrainEntity {
   )
   private ZoneEntity zone;
 
-  // Physical feature — does this train have onboard food service
   @Column(name = "pantry_car", nullable = false)
   @Builder.Default
   private Boolean pantrycar = false;
-
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
 
   @Column(name = "created_by")
   private Long createdBy;

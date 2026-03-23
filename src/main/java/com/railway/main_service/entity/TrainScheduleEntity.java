@@ -27,20 +27,14 @@ public class TrainScheduleEntity {
     foreignKey = @ForeignKey(name = "fk_schedule_train"))
   private TrainEntity train;
 
-
   @Column(name = "runs_on_days", nullable = false, length = 50)
   private String runsOnDays;
 
   @Column(name = "start_date", nullable = false)
   private LocalDate startDate;
 
-  // null = indefinite (no planned end)
   @Column(name = "end_date")
   private LocalDate endDate;
-
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
 
   @Column(name = "created_by")
   private Long createdBy;
@@ -65,9 +59,17 @@ public class TrainScheduleEntity {
     updatedAt = LocalDateTime.now();
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  @Transient
+  public boolean isCurrentlyActive() {
+    return isActiveOn(LocalDate.now());
+  }
 
-  /** Parse stored string → Set<RunDay> */
+  @Transient
+  public boolean isActiveOn(LocalDate date) {
+    if (date.isBefore(startDate)) return false;
+    return endDate == null || !date.isAfter(endDate);
+  }
+
   @Transient
   public Set<RunDay> getRunDaysAsSet() {
     if (runsOnDays == null || runsOnDays.isBlank()) return EnumSet.noneOf(RunDay.class);
@@ -78,7 +80,6 @@ public class TrainScheduleEntity {
     return days;
   }
 
-  /** Convert Set<RunDay> → comma-separated string for storage */
   public static String toDayString(Set<RunDay> days) {
     if (days == null || days.isEmpty()) return "";
     return days.stream()

@@ -2,9 +2,13 @@ package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.DeactivateRequest;
+import com.railway.main_service.dto.request.ActivateRequest;
 import com.railway.main_service.dto.request.trainType.AddTrainTypeRequest;
 import com.railway.main_service.dto.request.trainType.SetAllowedCoachesRequest;
 import com.railway.main_service.dto.request.trainType.UpdateTrainTypeRequest;
+import com.railway.main_service.dto.response.DeactivationResponse;
+import com.railway.main_service.dto.response.PeriodResponse;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.trainType.AllowedCoachResponse;
 import com.railway.main_service.dto.response.trainType.TrainTypeResponse;
@@ -21,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -46,13 +51,30 @@ public class TrainTypeController {
     return ResponseEntity.ok(ApiResponse.success(trainTypeService.updateTrainType(typeCode, request)));
   }
 
-  @PostMapping(ApiConstants.CHANGE_STATUS)
+  @PostMapping(ApiConstants.DEACTIVATE_TRAIN_TYPE)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<TrainTypeResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<DeactivationResponse>> deactivate(
     @PathVariable String typeCode,
-    @RequestParam boolean isActive) {
+    @RequestBody @Valid DeactivateRequest request) {
     return ResponseEntity.ok(ApiResponse.success(
-      trainTypeService.toggleStatus(typeCode, isActive)));
+      trainTypeService.deactivate(typeCode, request)));
+  }
+
+  @PostMapping(ApiConstants.ACTIVATE_TRAIN_TYPE)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<DeactivationResponse>> activate(
+    @PathVariable String typeCode,
+    @RequestBody @Valid ActivateRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainTypeService.activate(typeCode, request)));
+  }
+
+  @GetMapping(ApiConstants.TRAIN_TYPE_PERIODS)
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<List<PeriodResponse>>> getPeriods(
+    @PathVariable String typeCode) {
+    return ResponseEntity.ok(ApiResponse.success(
+      trainTypeService.getPeriods(typeCode)));
   }
 
   @GetMapping(ApiConstants.GET_TRAIN_TYPES)

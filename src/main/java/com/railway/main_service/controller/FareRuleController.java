@@ -2,7 +2,11 @@ package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.DeactivateRequest;
+import com.railway.main_service.dto.request.ActivateRequest;
 import com.railway.main_service.dto.request.fareRule.AddFareRuleRequest;
+import com.railway.main_service.dto.response.DeactivationResponse;
+import com.railway.main_service.dto.response.PeriodResponse;
 import com.railway.main_service.dto.response.fareRule.FareRuleResponse;
 import com.railway.main_service.service.fareRuleService.FareRuleService;
 import jakarta.validation.Valid;
@@ -31,13 +35,13 @@ public class FareRuleController {
       fareRuleService.addFareRule(request)));
   }
 
-  @PostMapping(ApiConstants.FARE_RULE_STATUS)
+  @PostMapping(ApiConstants.CLOSE_FARE_RULE)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<FareRuleResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<FareRuleResponse>> closeRule(
     @PathVariable Long ruleId,
-    @RequestParam boolean isActive) {
+    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
     return ResponseEntity.ok(ApiResponse.success(
-      fareRuleService.toggleStatus(ruleId, isActive)));
+      fareRuleService.closeRule(ruleId, endDate)));
   }
 
   @GetMapping(ApiConstants.GET_FARE_RULES_ADMIN)

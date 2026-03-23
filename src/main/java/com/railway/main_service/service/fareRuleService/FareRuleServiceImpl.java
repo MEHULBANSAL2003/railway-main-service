@@ -10,9 +10,12 @@ import com.railway.main_service.entity.FareRuleEntity;
 import com.railway.main_service.entity.QuotaEntity;
 import com.railway.main_service.entity.TrainTypeEntity;
 import com.railway.main_service.repository.CoachTypeRepository;
+import com.railway.main_service.repository.CoachTypePeriodRepository;
 import com.railway.main_service.repository.FareRuleRepository;
 import com.railway.main_service.repository.QuotaRepository;
+import com.railway.main_service.repository.QuotaPeriodRepository;
 import com.railway.main_service.repository.TrainTypeRepository;
+import com.railway.main_service.repository.TrainTypePeriodRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -30,10 +33,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FareRuleServiceImpl implements FareRuleService {
 
-  private final FareRuleRepository   fareRuleRepository;
-  private final TrainTypeRepository  trainTypeRepository;
-  private final CoachTypeRepository  coachTypeRepository;
-  private final QuotaRepository quotaRepository;
+  private final FareRuleRepository       fareRuleRepository;
+  private final TrainTypeRepository      trainTypeRepository;
+  private final CoachTypeRepository      coachTypeRepository;
+  private final QuotaRepository          quotaRepository;
+  private final TrainTypePeriodRepository trainTypePeriodRepository;
+  private final CoachTypePeriodRepository coachTypePeriodRepository;
+  private final QuotaPeriodRepository     quotaPeriodRepository;
 
   private static final Map<String, int[]> TATKAL_BOUNDS = Map.of(
     "SL",  new int[]{100, 200},
@@ -54,33 +60,39 @@ public class FareRuleServiceImpl implements FareRuleService {
     String coachCode = request.getCoachTypeCode().trim().toUpperCase();
     String quotaCode = request.getQuotaCode().trim().toUpperCase();
     BigDecimal tatkalCharge = request.getTatkalCharge();
+    LocalDate today = LocalDate.now();
 
+    // Validate quota exists
     QuotaEntity quota = quotaRepository.findByQuotaCode(quotaCode)
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "QUOTA_NOT_FOUND",
         "Quota not found: " + quotaCode));
-    if (!quota.getIsActive()) {
+
+    // Check quota is active via period table
+    if (!quotaPeriodRepository.isActiveOnDate(quota.getQuotaId(), today)) {
       throw new BaseException(HttpStatus.BAD_REQUEST, "QUOTA_INACTIVE",
-        "Quota '" + quotaCode + "' is inactive.");
+        "Quota '" + quotaCode + "' is not active on " + today + ".");
     }
 
-    // Validate train type exists and is active
+    // Validate train type exists
     TrainTypeEntity trainType = trainTypeRepository.findByTypeCode(trainCode)
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "TRAIN_TYPE_NOT_FOUND",
         "Train type not found: " + trainCode));
 
-    if (!trainType.getIsActive()) {
+    // Check train type is active via period table
+    if (!trainTypePeriodRepository.isActiveOnDate(trainType.getTypeId(), today)) {
       throw new BaseException(HttpStatus.BAD_REQUEST, "TRAIN_TYPE_INACTIVE",
-        "Train type '" + trainCode + "' is inactive. Activate it before adding fare rules.");
+        "Train type '" + trainCode + "' is not active on " + today + ". Activate it before adding fare rules.");
     }
 
-    // Validate coach type exists and is active
+    // Validate coach type exists
     CoachTypeEntity coachType = coachTypeRepository.findByTypeCode(coachCode)
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "COACH_TYPE_NOT_FOUND",
         "Coach type not found: " + coachCode));
 
-    if (!coachType.getIsActive()) {
+    // Check coach type is active via period table
+    if (!coachTypePeriodRepository.isActiveOnDate(coachType.getTypeId(), today)) {
       throw new BaseException(HttpStatus.BAD_REQUEST, "COACH_TYPE_INACTIVE",
-        "Coach type '" + coachCode + "' is inactive. Activate it before adding fare rules.");
+        "Coach type '" + coachCode + "' is not active on " + today + ". Activate it before adding fare rules.");
     }
 
     // Validate effectiveUntil is after effectiveFrom
@@ -118,7 +130,6 @@ public class FareRuleServiceImpl implements FareRuleService {
       }
     }
 
-
     // Auto-close previous open rule for this combo
     fareRuleRepository.findOpenRule(trainCode, coachCode, quotaCode).ifPresent(existing -> {
       existing.setEffectiveUntil(request.getEffectiveFrom().minusDays(1));
@@ -147,21 +158,24 @@ public class FareRuleServiceImpl implements FareRuleService {
 
   @Override
   @Transactional
-  public FareRuleResponse toggleStatus(Long ruleId, boolean isActive) {
+  public FareRuleResponse closeRule(Long ruleId, LocalDate endDate) {
     FareRuleEntity entity = fareRuleRepository.findById(ruleId)
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "FARE_RULE_NOT_FOUND",
         "Fare rule not found with id: " + ruleId));
 
-    if (entity.getIsActive().equals(isActive))
-      return toResponse(entity, null);
-    entity.setIsActive(isActive);
+    if (entity.getEffectiveUntil() != null && !entity.getEffectiveUntil().isAfter(LocalDate.now())) {
+      throw new BaseException(HttpStatus.BAD_REQUEST, "RULE_ALREADY_CLOSED",
+        "Fare rule is already closed (effective until " + entity.getEffectiveUntil() + ").");
+    }
+
+    entity.setEffectiveUntil(endDate);
     entity.setUpdatedBy(SecurityUtils.getCurrentAdminId());
-    return toResponse(fareRuleRepository.save(entity),
-      "Fare rule " + (isActive ? "activated" : "deactivated") + " successfully.");
+    FareRuleEntity saved = fareRuleRepository.save(entity);
+    return toResponse(saved, "Fare rule closed. Effective until " + endDate + ".");
   }
 
   @Override
-  public List<FareRuleResponse> getAllForAdmin(String trainTypeCode, String coachTypeCode,String quotaCode) {
+  public List<FareRuleResponse> getAllForAdmin(String trainTypeCode, String coachTypeCode, String quotaCode) {
     String tc = (trainTypeCode != null && !trainTypeCode.isBlank()) ? trainTypeCode.toUpperCase() : null;
     String cc = (coachTypeCode != null && !coachTypeCode.isBlank()) ? coachTypeCode.toUpperCase() : null;
     String qc = (quotaCode != null && !quotaCode.isBlank()) ? quotaCode.toUpperCase() : null;
@@ -176,7 +190,6 @@ public class FareRuleServiceImpl implements FareRuleService {
       .stream().map(e -> toResponse(e, null)).toList();
   }
 
-  // Fix getCurrentRule:
   @Override
   public FareRuleResponse getCurrentRule(String trainTypeCode, String coachTypeCode, String quotaCode, LocalDate date) {
     return fareRuleRepository.findCurrentRule(
@@ -189,7 +202,9 @@ public class FareRuleServiceImpl implements FareRuleService {
 
   // ── Mapper ───────────────────────────────────────────────
   private FareRuleResponse toResponse(FareRuleEntity e, String message) {
-    boolean isCurrent = e.getIsActive()
+    boolean isActive = e.isCurrentlyActive();
+
+    boolean isCurrent = isActive
       && !LocalDate.now().isBefore(e.getEffectiveFrom())
       && (e.getEffectiveUntil() == null || !LocalDate.now().isAfter(e.getEffectiveUntil()));
 
@@ -211,7 +226,7 @@ public class FareRuleServiceImpl implements FareRuleService {
       .gstPct(e.getGstPct())
       .effectiveFrom(e.getEffectiveFrom())
       .effectiveUntil(e.getEffectiveUntil())
-      .isActive(e.getIsActive())
+      .isActive(isActive)
       .isCurrent(isCurrent)
       .createdBy(e.getCreatedBy())
       .createdAt(e.getCreatedAt())

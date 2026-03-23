@@ -2,8 +2,12 @@ package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.ActivateRequest;
+import com.railway.main_service.dto.request.DeactivateRequest;
 import com.railway.main_service.dto.request.quota.AddQuotaRequest;
 import com.railway.main_service.dto.request.quota.UpdateQuotaRequest;
+import com.railway.main_service.dto.response.DeactivationResponse;
+import com.railway.main_service.dto.response.PeriodResponse;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.quota.QuotaResponse;
 import com.railway.main_service.service.quotaService.QuotaService;
@@ -14,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -40,13 +45,30 @@ public class QuotaController {
       quotaService.updateQuota(quotaCode, request)));
   }
 
-  @PostMapping(ApiConstants.QUOTA_STATUS)
+  @PostMapping(ApiConstants.DEACTIVATE_QUOTA)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<QuotaResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<DeactivationResponse>> deactivate(
     @PathVariable String quotaCode,
-    @RequestParam boolean isActive) {
+    @RequestBody @Valid DeactivateRequest request) {
     return ResponseEntity.ok(ApiResponse.success(
-      quotaService.toggleStatus(quotaCode, isActive)));
+      quotaService.deactivate(quotaCode, request)));
+  }
+
+  @PostMapping(ApiConstants.ACTIVATE_QUOTA)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<DeactivationResponse>> activate(
+    @PathVariable String quotaCode,
+    @RequestBody @Valid ActivateRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(
+      quotaService.activate(quotaCode, request)));
+  }
+
+  @GetMapping(ApiConstants.QUOTA_PERIODS)
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<List<PeriodResponse>>> getPeriods(
+    @PathVariable String quotaCode) {
+    return ResponseEntity.ok(ApiResponse.success(
+      quotaService.getPeriods(quotaCode)));
   }
 
   @GetMapping(ApiConstants.GET_QUOTAS_DROPDOWN)

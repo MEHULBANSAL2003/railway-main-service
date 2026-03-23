@@ -3,8 +3,12 @@ package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.ActivateRequest;
+import com.railway.main_service.dto.request.DeactivateRequest;
 import com.railway.main_service.dto.request.coachType.AddCoachTypeRequest;
 import com.railway.main_service.dto.request.coachType.UpdateCoachTypeRequest;
+import com.railway.main_service.dto.response.DeactivationResponse;
+import com.railway.main_service.dto.response.PeriodResponse;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.coachType.CoachTypeResponse;
 import com.railway.main_service.service.coachTypeService.CoachTypeService;
@@ -21,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -47,13 +52,30 @@ public class CoachTypeController {
       coachTypeService.updateCoachType(typeCode, request)));
   }
 
-  @PostMapping(ApiConstants.CHANGE_STATUS_COACH_TYPE)
+  @PostMapping(ApiConstants.DEACTIVATE_COACH_TYPE)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<CoachTypeResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<DeactivationResponse>> deactivate(
     @PathVariable String typeCode,
-    @RequestParam boolean isActive) {
+    @RequestBody @Valid DeactivateRequest request) {
     return ResponseEntity.ok(ApiResponse.success(
-      coachTypeService.toggleStatus(typeCode, isActive)));
+      coachTypeService.deactivate(typeCode, request)));
+  }
+
+  @PostMapping(ApiConstants.ACTIVATE_COACH_TYPE)
+  @PreAuthorize("hasRole('SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<DeactivationResponse>> activate(
+    @PathVariable String typeCode,
+    @RequestBody @Valid ActivateRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(
+      coachTypeService.activate(typeCode, request)));
+  }
+
+  @GetMapping(ApiConstants.COACH_TYPE_PERIODS)
+  @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+  public ResponseEntity<ApiResponse<List<PeriodResponse>>> getPeriods(
+    @PathVariable String typeCode) {
+    return ResponseEntity.ok(ApiResponse.success(
+      coachTypeService.getPeriods(typeCode)));
   }
 
   @GetMapping(ApiConstants.GET_COACH_TYPES)

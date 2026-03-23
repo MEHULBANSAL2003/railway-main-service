@@ -24,4 +24,6 @@ public interface JourneyService {
   JourneyResponse addJourney(String trainNumber, AddJourneyRequest request);
 
   void cancelJourney(String trainNumber, Long journeyId, CancelJourneyRequest request);
+
+  int bulkCancelFromDate(String trainNumber, LocalDate fromDate, LocalDate toDate, String reason);
 }

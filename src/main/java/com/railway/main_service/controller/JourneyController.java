@@ -2,8 +2,12 @@ package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.DeactivateRequest;
+import com.railway.main_service.dto.request.ActivateRequest;
 import com.railway.main_service.dto.request.journey.AddJourneyRequest;
 import com.railway.main_service.dto.request.journey.CancelJourneyRequest;
+import com.railway.main_service.dto.response.DeactivationResponse;
+import com.railway.main_service.dto.response.PeriodResponse;
 import com.railway.main_service.dto.response.journey.BulkGenerateResponse;
 import com.railway.main_service.dto.response.journey.JourneyResponse;
 import com.railway.main_service.service.journeyService.JourneyService;
@@ -78,5 +82,16 @@ public class JourneyController {
     @Valid @RequestBody CancelJourneyRequest request) {
     journeyService.cancelJourney(trainNumber, journeyId, request);
     return ResponseEntity.ok().build();
+  }
+
+  // POST /api/main/trains/{trainNumber}/journeys/bulk-cancel
+  @PostMapping(ApiConstants.BULK_CANCEL_JOURNEYS)
+  public ResponseEntity<ApiResponse<Void>> bulkCancel(
+    @PathVariable String trainNumber,
+    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+    @RequestParam String reason) {
+    journeyService.bulkCancelFromDate(trainNumber, fromDate, toDate, reason);
+    return ResponseEntity.ok(ApiResponse.success(null));
   }
 }

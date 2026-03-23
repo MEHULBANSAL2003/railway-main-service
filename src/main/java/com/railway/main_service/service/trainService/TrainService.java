@@ -1,8 +1,12 @@
 package com.railway.main_service.service.trainService;
 
+import com.railway.main_service.dto.request.ActivateRequest;
+import com.railway.main_service.dto.request.DeactivateRequest;
 import com.railway.main_service.dto.request.train.AddTrainRequest;
 import com.railway.main_service.dto.request.train.UpdateTrainRequest;
+import com.railway.main_service.dto.response.DeactivationResponse;
 import com.railway.main_service.dto.response.PageResponse;
+import com.railway.main_service.dto.response.PeriodResponse;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.train.BulkUploadResponse;
 import com.railway.main_service.dto.response.train.ReturnTrainResponse;
@@ -17,7 +21,11 @@ public interface TrainService {
 
   TrainResponse updateTrain(String trainNumber, UpdateTrainRequest request);
 
-  TrainResponse toggleStatus(String trainNumber, boolean isActive);
+  DeactivationResponse deactivate(String trainNumber, DeactivateRequest request);
+
+  DeactivationResponse activate(String trainNumber, ActivateRequest request);
+
+  List<PeriodResponse> getPeriods(String trainNumber);
 
   CascadeInfoResponse getCascadeInfo(String trainNumber);
 
@@ -37,7 +45,7 @@ public interface TrainService {
 
   List<TrainResponse> getAllForDropdown(String search);
 
-  // Return train pairing — used by "Add return train?" prompt
+  // Return train pairing -- used by "Add return train?" prompt
   ReturnTrainResponse getReturnTrainInfo(String trainNumber);
 
   // Excel bulk upload

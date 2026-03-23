@@ -65,10 +65,6 @@ public class FareRuleEntity {
   @Column(name = "effective_until")
   private LocalDate effectiveUntil;
 
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
-
   @Column(name = "created_by")
   private Long createdBy;
 
@@ -90,5 +86,16 @@ public class FareRuleEntity {
   @PreUpdate
   protected void onUpdate() {
     updatedAt = LocalDateTime.now();
+  }
+
+  @Transient
+  public boolean isCurrentlyActive() {
+    return isActiveOn(LocalDate.now());
+  }
+
+  @Transient
+  public boolean isActiveOn(LocalDate date) {
+    if (date.isBefore(effectiveFrom)) return false;
+    return effectiveUntil == null || !date.isAfter(effectiveUntil);
   }
 }
