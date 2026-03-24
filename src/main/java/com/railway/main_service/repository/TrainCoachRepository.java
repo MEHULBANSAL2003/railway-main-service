@@ -19,28 +19,28 @@ public interface TrainCoachRepository extends JpaRepository<TrainCoachEntity, Lo
       JOIN FETCH tc.coachType ct
       WHERE tc.train.trainId  = :trainId
         AND tc.effectiveFrom <= :today
-        AND (tc.effectiveTo IS NULL OR tc.effectiveTo >= :today)
+        AND (tc.effectiveTill IS NULL OR tc.effectiveTill > :today)
       ORDER BY ct.typeCode ASC
       """)
   List<TrainCoachEntity> findCurrentByTrainId(
     @Param("trainId") Long trainId,
     @Param("today")   LocalDate today);
 
-  // ── Inactive rows — effectiveTo is in the past ────────────────────────────
+  // ── Inactive rows — effectiveTill is in the past ────────────────────────────
   @Query("""
     SELECT tc FROM TrainCoachEntity tc
     JOIN FETCH tc.coachType ct
     WHERE tc.train.trainId  = :trainId
-      AND tc.effectiveTo IS NOT NULL
-      AND tc.effectiveTo     < :today
+      AND tc.effectiveTill IS NOT NULL
+      AND tc.effectiveTill     < :today
       AND NOT EXISTS (
         SELECT 1 FROM TrainCoachEntity tc2
         WHERE tc2.train.trainId    = tc.train.trainId
           AND tc2.coachType.typeId = tc.coachType.typeId
           AND tc2.effectiveFrom   <= :today
-          AND (tc2.effectiveTo IS NULL OR tc2.effectiveTo >= :today)
+          AND (tc2.effectiveTill IS NULL OR tc2.effectiveTill > :today)
       )
-    ORDER BY ct.typeCode ASC, tc.effectiveTo DESC
+    ORDER BY ct.typeCode ASC, tc.effectiveTill DESC
     """)
   List<TrainCoachEntity> findInactiveByTrainId(
     @Param("trainId") Long      trainId,
@@ -73,13 +73,16 @@ public interface TrainCoachRepository extends JpaRepository<TrainCoachEntity, Lo
       JOIN FETCH tc.coachType ct
       WHERE tc.train.trainId  = :trainId
         AND tc.effectiveFrom <= :journeyDate
-        AND (tc.effectiveTo IS NULL OR tc.effectiveTo >= :journeyDate)
+        AND (tc.effectiveTill IS NULL OR tc.effectiveTill > :journeyDate)
       """)
   List<TrainCoachEntity> findActiveCoachesForDate(
     @Param("trainId")     Long      trainId,
     @Param("journeyDate") LocalDate journeyDate);
 
-  List<TrainCoachEntity> findByTrain_TrainIdAndIsActiveTrue(Long trainId);
+  @Query("SELECT tc FROM TrainCoachEntity tc " +
+    "WHERE tc.train.trainId = :trainId " +
+    "AND tc.effectiveFrom <= CURRENT_DATE AND (tc.effectiveTill IS NULL OR tc.effectiveTill > CURRENT_DATE)")
+  List<TrainCoachEntity> findActiveByTrainId(@Param("trainId") Long trainId);
 
   boolean existsByTrain_TrainIdAndCoachType_TypeId(Long trainId, Long coachTypeId);
 
@@ -87,7 +90,7 @@ public interface TrainCoachRepository extends JpaRepository<TrainCoachEntity, Lo
       SELECT COUNT(tc) > 0 FROM TrainCoachEntity tc
       WHERE tc.train.trainId      = :trainId
         AND tc.coachType.typeId   = :coachTypeId
-        AND tc.effectiveTo IS NULL
+        AND tc.effectiveTill IS NULL
       """)
   boolean existsActiveRowByTrainAndCoachType(
     @Param("trainId")     Long trainId,
@@ -95,9 +98,18 @@ public interface TrainCoachRepository extends JpaRepository<TrainCoachEntity, Lo
 
   Optional<TrainCoachEntity> findByCoachIdAndTrain_TrainId(Long coachId, Long trainId);
 
-  int countByTrain_TrainIdAndIsActiveTrue(Long trainId);
+  @Query("SELECT COUNT(tc) FROM TrainCoachEntity tc " +
+    "WHERE tc.train.trainId = :trainId " +
+    "AND tc.effectiveFrom <= CURRENT_DATE AND (tc.effectiveTill IS NULL OR tc.effectiveTill > CURRENT_DATE)")
+  int countActiveByTrainId(@Param("trainId") Long trainId);
+
   int countByTrain_TrainId(Long trainId);
-  int countByCoachType_TypeCodeAndIsActiveTrue(String typeCode);
+
+  @Query("SELECT COUNT(tc) FROM TrainCoachEntity tc " +
+    "JOIN tc.coachType ct " +
+    "WHERE ct.typeCode = :typeCode " +
+    "AND tc.effectiveFrom <= CURRENT_DATE AND (tc.effectiveTill IS NULL OR tc.effectiveTill > CURRENT_DATE)")
+  int countActiveByCoachTypeCode(@Param("typeCode") String typeCode);
 
   @Query("SELECT tc.coachType.typeId FROM TrainCoachEntity tc WHERE tc.train.trainId = :trainId")
   List<Long> findUsedCoachTypeIdsByTrainId(@Param("trainId") Long trainId);
@@ -107,7 +119,7 @@ public interface TrainCoachRepository extends JpaRepository<TrainCoachEntity, Lo
       WHERE tc.train.trainId    = :trainId
         AND tc.coachType.typeId = :coachTypeId
         AND tc.effectiveFrom   <= :dateTo
-        AND (tc.effectiveTo IS NULL OR tc.effectiveTo >= :dateFrom)
+        AND (tc.effectiveTill IS NULL OR tc.effectiveTill >= :dateFrom)
       """)
   List<TrainCoachEntity> findOverlapping(
     @Param("trainId")     Long      trainId,

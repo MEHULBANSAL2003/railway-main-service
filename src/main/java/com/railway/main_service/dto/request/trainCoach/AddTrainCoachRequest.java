@@ -32,9 +32,9 @@ public class AddTrainCoachRequest {
   private LocalDate effectiveFrom;
 
   // Optional — null means no end date (open-ended)
-  private LocalDate effectiveTo;
+  private LocalDate effectiveTill;
 
   // Optional — reason for adding this coach config
   @Size(max = 500)
-  private String changeReason;
+  private String reason;
 }

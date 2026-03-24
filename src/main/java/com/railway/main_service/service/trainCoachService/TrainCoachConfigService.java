@@ -45,11 +45,11 @@ public class TrainCoachConfigService {
     TrainEntity      train = findTrain(trainNumber);
     TrainCoachEntity coach = findCoach(coachId, train.getTrainId());
 
-    if (!Boolean.TRUE.equals(coach.getIsActive()))
+    if (!coach.isCurrentlyActive())
       throw new BaseException(HttpStatus.BAD_REQUEST, "COACH_INACTIVE",
         "Cannot change config of an inactive coach. Reactivate it first.");
 
-    validateDateRange(req.getEffectiveFrom(), req.getEffectiveTo());
+    validateDateRange(req.getEffectiveFrom(), req.getEffectiveTill());
 
     int seatsPerCoach = coach.getCoachType().getTotalSeats();
     validatePerCoachQuotas(req.getTatkalSeats(), req.getRacSeats(),
@@ -62,7 +62,7 @@ public class TrainCoachConfigService {
 
     // ── Conflict check ────────────────────────────────────────────────────
     List<CoachConfigConflictItem> conflicts = checkConflicts(
-      coach, req.getEffectiveFrom(), req.getEffectiveTo(),
+      coach, req.getEffectiveFrom(), req.getEffectiveTill(),
       newTotalSeats, newTotalTatkal, newTotalRac, newWaitlistLimit
     );
 
@@ -81,19 +81,19 @@ public class TrainCoachConfigService {
     coach.setRacSeats(req.getRacSeats());
     coach.setWaitlistLimit(req.getWaitlistLimit());
     coach.setEffectiveFrom(req.getEffectiveFrom());
-    coach.setEffectiveTo(req.getEffectiveTo());
-    coach.setChangeReason(req.getChangeReason());
+    coach.setEffectiveTill(req.getEffectiveTill());
+    coach.setReason(req.getReason());
     coach.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     trainCoachRepository.save(coach);
 
     // ── Update inventory rows in date range ───────────────────────────────
     int generalUpdated = inventoryRepository.updateGeneralInventory(
       coachId, newTotalSeats, newTotalRac, newWaitlistLimit,
-      req.getEffectiveFrom(), req.getEffectiveTo()
+      req.getEffectiveFrom(), req.getEffectiveTill()
     );
     int tatkalUpdated = inventoryRepository.updateTatkalInventory(
       coachId, newTotalTatkal,
-      req.getEffectiveFrom(), req.getEffectiveTo()
+      req.getEffectiveFrom(), req.getEffectiveTill()
     );
 
     int affected = generalUpdated + tatkalUpdated;
@@ -104,8 +104,8 @@ public class TrainCoachConfigService {
     return CoachConfigChangeResponse.builder()
       .success(true)
       .message("Config updated from " + req.getEffectiveFrom().format(DATE_FMT) +
-        (req.getEffectiveTo() != null
-          ? " to " + req.getEffectiveTo().format(DATE_FMT)
+        (req.getEffectiveTill() != null
+          ? " to " + req.getEffectiveTill().format(DATE_FMT)
           : " onwards") +
         ". " + affected + " journey inventory rows updated.")
       .affectedJourneys(affected)
@@ -113,7 +113,7 @@ public class TrainCoachConfigService {
   }
 
   // ── Deactivate ────────────────────────────────────────────────────────────
-  // Sets effectiveTo = effectiveFrom - 1 on the current active row.
+  // Sets effectiveTill = effectiveFrom on the current active row.
   // Removes unbooked inventory from effectiveFrom onwards.
   // Blocks if any journey in range has existing bookings.
   @Transactional
@@ -122,19 +122,19 @@ public class TrainCoachConfigService {
     TrainEntity      train = findTrain(trainNumber);
     TrainCoachEntity coach = findCoach(coachId, train.getTrainId());
 
-    if (!Boolean.TRUE.equals(coach.getIsActive()))
+    if (!coach.isCurrentlyActive())
       throw new BaseException(HttpStatus.BAD_REQUEST, "COACH_ALREADY_INACTIVE",
         "Coach is already inactive.");
 
-    validateDateRange(req.getEffectiveFrom(), req.getEffectiveTo());
+    validateDateRange(req.getEffectiveFrom(), req.getEffectiveTill());
 
     // Check for bookings in the date range
     List<JourneySeatInventoryEntity> inventoryRows =
       inventoryRepository.findByCoachFromDate(coachId, req.getEffectiveFrom());
 
-    if (req.getEffectiveTo() != null) {
+    if (req.getEffectiveTill() != null) {
       inventoryRows = inventoryRows.stream()
-        .filter(i -> !i.getJourney().getJourneyDate().isAfter(req.getEffectiveTo()))
+        .filter(i -> !i.getJourney().getJourneyDate().isAfter(req.getEffectiveTill()))
         .toList();
     }
 
@@ -163,16 +163,15 @@ public class TrainCoachConfigService {
         .build();
     }
 
-    // ── Apply: set effectiveTo = effectiveFrom - 1, mark inactive ─────────
-    coach.setEffectiveTo(req.getEffectiveFrom().minusDays(1));
-    coach.setIsActive(false);
-    coach.setChangeReason(req.getChangeReason());
+    // ── Apply: set effectiveTill = effectiveFrom, mark inactive ────────────
+    coach.setEffectiveTill(req.getEffectiveFrom());
+    coach.setReason(req.getReason());
     coach.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     trainCoachRepository.save(coach);
 
     // Delete unbooked inventory rows in range
     int deleted = inventoryRepository.deleteUnbookedInventory(
-      coachId, req.getEffectiveFrom(), req.getEffectiveTo()
+      coachId, req.getEffectiveFrom(), req.getEffectiveTill()
     );
 
     log.info("Coach {} deactivated for train {} from {} | {} inventory rows deleted",
@@ -181,8 +180,8 @@ public class TrainCoachConfigService {
     return CoachConfigChangeResponse.builder()
       .success(true)
       .message("Coach deactivated from " + req.getEffectiveFrom().format(DATE_FMT) +
-        (req.getEffectiveTo() != null
-          ? " to " + req.getEffectiveTo().format(DATE_FMT)
+        (req.getEffectiveTill() != null
+          ? " to " + req.getEffectiveTill().format(DATE_FMT)
           : " onwards") +
         ". " + deleted + " future inventory rows removed.")
       .affectedJourneys(deleted)
@@ -190,22 +189,21 @@ public class TrainCoachConfigService {
   }
 
   // ── Reactivate ────────────────────────────────────────────────────────────
-  // Finds the inactive row, sets effectiveFrom = given date, effectiveTo = null.
-  // isActive = true. History is preserved — just updating the row's date range.
+  // Finds the inactive row, sets effectiveFrom = given date, effectiveTill = null.
+  // isActive is derived from dates. History is preserved — just updating the row's date range.
   @Transactional
   public CoachConfigChangeResponse reactivate(String trainNumber, Long coachId,
                                               ReactivateCoachRequest req) {
     TrainEntity      train = findTrain(trainNumber);
     TrainCoachEntity coach = findCoach(coachId, train.getTrainId());
 
-    if (Boolean.TRUE.equals(coach.getIsActive()))
+    if (coach.isCurrentlyActive())
       throw new BaseException(HttpStatus.BAD_REQUEST, "COACH_ALREADY_ACTIVE",
         "Coach is already active.");
 
     coach.setEffectiveFrom(req.getEffectiveFrom());
-    coach.setEffectiveTo(null);
-    coach.setIsActive(true);
-    coach.setChangeReason(req.getChangeReason());
+    coach.setEffectiveTill(null);
+    coach.setReason(req.getReason());
     coach.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     trainCoachRepository.save(coach);
 

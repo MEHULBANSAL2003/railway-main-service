@@ -2,6 +2,7 @@ package com.railway.main_service.dto.response.quota;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
@@ -12,6 +13,9 @@ public class QuotaResponse {
   private String quotaName;
   private String description;
   private Boolean isActive;
+  private LocalDate effectiveFrom;
+  private LocalDate effectiveTill;
+  private String reason;
   private Long createdBy;
   private Long updatedBy;
   private LocalDateTime createdAt;

@@ -18,6 +18,5 @@ public class StationExcelDto {
   private String stationType;
   private Double latitude;
   private Double longitude;
-  private Boolean isActive;
   private Integer numPlatforms;
 }

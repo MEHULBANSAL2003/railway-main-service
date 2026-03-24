@@ -57,11 +57,11 @@ public class InventoryInitService {
   public void initForNewCoach(TrainCoachEntity coach) {
     Long      trainId       = coach.getTrain().getTrainId();
     LocalDate effectiveFrom = coach.getEffectiveFrom();
-    LocalDate effectiveTo   = coach.getEffectiveTo(); // null = open-ended
+    LocalDate effectiveTill = coach.getEffectiveTill(); // null = open-ended
 
     // Find all non-cancelled future journeys for this train in the effective range
-    List<JourneyEntity> journeys = effectiveTo != null
-      ? journeyRepository.findByTrainIdAndDateRange(trainId, effectiveFrom, effectiveTo)
+    List<JourneyEntity> journeys = effectiveTill != null
+      ? journeyRepository.findByTrainIdAndDateRange(trainId, effectiveFrom, effectiveTill)
       : journeyRepository.findByTrainIdFromDate(trainId, effectiveFrom);
 
     if (journeys.isEmpty()) {

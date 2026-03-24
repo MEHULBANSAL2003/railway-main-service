@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
     columnNames = {"train_type_id", "coach_type_id", "quota_id", "effective_from"}
   )
 )
-public class FareRuleEntity {
+public class FareRuleEntity implements Activatable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -59,15 +59,15 @@ public class FareRuleEntity {
   @Builder.Default
   private BigDecimal gstPct = BigDecimal.ZERO;
 
+  // ── Effective date range (renamed: effectiveUntil → effectiveTill, added reason, removed isActive) ──
   @Column(name = "effective_from", nullable = false)
   private LocalDate effectiveFrom;
 
-  @Column(name = "effective_until")
-  private LocalDate effectiveUntil;
+  @Column(name = "effective_till")
+  private LocalDate effectiveTill;
 
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
+  @Column(name = "reason", length = 500)
+  private String reason;
 
   @Column(name = "created_by")
   private Long createdBy;

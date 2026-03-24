@@ -53,7 +53,7 @@ public class TrainStopServiceImpl implements TrainStopService {
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "STATION_NOT_FOUND",
         "Station not found: " + stationCode));
 
-    if (!station.getIsActive())
+    if (!station.isCurrentlyActive())
       throw new BaseException(HttpStatus.BAD_REQUEST, "STATION_INACTIVE",
         "Station '" + stationCode + "' is inactive and cannot be added as a stop.");
 

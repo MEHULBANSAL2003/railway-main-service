@@ -100,8 +100,7 @@ public class StationExcelProcessor extends AbstractExcelProcessor<StationExcelDt
       .stationType(ExcelHelper.getCellValue(row.getCell(5)).toUpperCase().trim())
       .latitude(ExcelHelper.getNumericValue(row.getCell(6)))
       .longitude(ExcelHelper.getNumericValue(row.getCell(7)))
-      .isActive(parseBoolean(ExcelHelper.getCellValue(row.getCell(8))))
-      .numPlatforms(ExcelHelper.getIntValue(row.getCell(9)))
+      .numPlatforms(ExcelHelper.getIntValue(row.getCell(8)))
       .build();
   }
 
@@ -172,7 +171,7 @@ public class StationExcelProcessor extends AbstractExcelProcessor<StationExcelDt
       return errors;
     }
 
-    if (!city.getIsActive()) {
+    if (!city.isCurrentlyActive()) {
       errors.add("City '" + dto.getCityName() + "' is inactive");
       return errors;
     }
@@ -203,7 +202,6 @@ public class StationExcelProcessor extends AbstractExcelProcessor<StationExcelDt
           .stationType(StationType.valueOf(dto.getStationType()))
           .latitude(dto.getLatitude())
           .longitude(dto.getLongitude())
-          .isActive(dto.getIsActive() != null ? dto.getIsActive() : true)
           .numPlatforms(dto.getNumPlatforms())
           .build();
       })

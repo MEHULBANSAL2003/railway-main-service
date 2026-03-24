@@ -3,10 +3,12 @@ package com.railway.main_service.service.stationService;
 import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
 import com.railway.main_service.dto.request.station.DeleteStationRequest;
 import com.railway.main_service.dto.request.station.StationFilterRequest;
 import com.railway.main_service.dto.request.station.UpdateStationRequest;
+import com.railway.main_service.enums.ActiveStatus;
 import com.railway.main_service.dto.response.pagination.PageResponseDto;
 import com.railway.main_service.dto.response.station.AddNewStationResponse;
 import com.railway.main_service.dto.response.station.DeleteStationResponse;
@@ -35,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -75,7 +78,7 @@ public class StationServiceImpl implements StationService{
         "City not found with id: " + request.getCityId()
       ));
 
-    if(!city.getState().getIsActive() || !city.getIsActive()){
+    if(!city.getState().isCurrentlyActive() || !city.isCurrentlyActive()){
         throw new BaseException(
         HttpStatus.BAD_REQUEST,
         "CITY_STATE_INACTIVE",
@@ -122,7 +125,7 @@ public class StationServiceImpl implements StationService{
       .numPlatforms(saved.getNumPlatforms())
       .createdBy(saved.getCreatedBy())
       .createdAt(saved.getCreatedAt())
-      .isActive(saved.getIsActive())
+      .isActive(saved.isCurrentlyActive())
       .message("Station created successfully")
       .build();
   }
@@ -226,35 +229,33 @@ public class StationServiceImpl implements StationService{
 
 
   @Override
-@Transactional
-  public StationResponse updateActiveInactiveStatus(String stationCode, boolean isActive) {
+  @Transactional
+  public StationResponse changeStatus(String stationCode, ChangeStatusRequest request) {
     StationEntity station = stationRepository
-      .findByStationCode(stationCode)
-      .orElseThrow(() -> new BaseException(
-        HttpStatus.NOT_FOUND,
-        "STATION_NOT_FOUND",
-        "Station not found with code: " + stationCode
-      ));
+        .findByStationCode(stationCode)
+        .orElseThrow(() -> new BaseException(
+            HttpStatus.NOT_FOUND,
+            "STATION_NOT_FOUND",
+            "Station not found with code: " + stationCode
+        ));
 
-    if (station.getIsActive().equals(isActive)) {
-      return StationMapper.toDto(station);
+    if (request.getStatus() == ActiveStatus.ACTIVE) {
+        station.setEffectiveFrom(request.getEffectiveFrom());
+        station.setEffectiveTill(null);
+        station.setReason(request.getReason());
+        station.setDeletedAt(null);
+        station.setDeletedBy(null);
+    } else {
+        station.setEffectiveTill(request.getEffectiveFrom());
+        station.setReason(request.getReason());
+        station.setDeletedAt(java.time.LocalDateTime.now());
+        station.setDeletedBy(SecurityUtils.getCurrentAdminId());
     }
-
-    station.setIsActive(isActive);
     station.setUpdatedAt(java.time.LocalDateTime.now());
     station.setUpdatedBy(SecurityUtils.getCurrentAdminId());
-    if(!isActive){
-      station.setDeletedAt(java.time.LocalDateTime.now());
-      station.setDeletedBy(SecurityUtils.getCurrentAdminId());
-    }
-    else{
-      station.setDeletedAt(null);
-      station.setDeletedBy(null);
-    }
     stationRepository.save(station);
 
     return StationMapper.toDto(station);
-
   }
 
   @Override
@@ -270,7 +271,7 @@ public class StationServiceImpl implements StationService{
       ));
 
     // ── 2. Station must be active to be updated ──────────────────────────────
-    if (!station.getIsActive()) {
+    if (!station.isCurrentlyActive()) {
       throw new BaseException(
         HttpStatus.BAD_REQUEST,
         "STATION_INACTIVE",
@@ -300,7 +301,7 @@ public class StationServiceImpl implements StationService{
         ));
 
       // City must be active
-      if (!city.getIsActive()) {
+      if (!city.isCurrentlyActive()) {
         throw new BaseException(
           HttpStatus.BAD_REQUEST,
           "CITY_INACTIVE",
@@ -309,7 +310,7 @@ public class StationServiceImpl implements StationService{
       }
 
       // State must be active
-      if (!city.getState().getIsActive()) {
+      if (!city.getState().isCurrentlyActive()) {
         throw new BaseException(
           HttpStatus.BAD_REQUEST,
           "STATE_INACTIVE",
@@ -339,7 +340,7 @@ public class StationServiceImpl implements StationService{
         ));
 
       // Optional: check zone is active if your ZoneEntity has isActive
-       if (!zone.getIsActive()) {
+       if (!zone.isCurrentlyActive()) {
          throw new BaseException(HttpStatus.BAD_REQUEST, "ZONE_INACTIVE", "Zone is inactive.");
        }
 
@@ -391,7 +392,7 @@ public class StationServiceImpl implements StationService{
       .createdAt(saved.getCreatedAt())
       .updatedAt(saved.getUpdatedAt())
       .updatedBy(saved.getUpdatedBy())
-      .isActive(saved.getIsActive())
+      .isActive(saved.isCurrentlyActive())
       .message("Station updated successfully")
       .build();
   }
@@ -407,7 +408,7 @@ public class StationServiceImpl implements StationService{
         "Station not found with code: " + stationCode
       ));
 
-    if(station.getIsActive()){
+    if(station.isCurrentlyActive()){
       throw new BaseException(
         HttpStatus.BAD_REQUEST,
         "STATION_ACTIVE",
@@ -424,7 +425,8 @@ public class StationServiceImpl implements StationService{
     }
 
     station.setIsPermanentlyDeleted(true);
-    station.setIsActive(false);
+    station.setEffectiveTill(LocalDate.now());
+    station.setReason("Permanently deleted");
     station.setDeletedAt(java.time.LocalDateTime.now());
     station.setDeletedBy(SecurityUtils.getCurrentAdminId());
     station.setPermanentDeleteReason(request.getReason().trim());
@@ -460,7 +462,9 @@ public class StationServiceImpl implements StationService{
     }
 
     station.setIsPermanentlyDeleted(false);
-    station.setIsActive(true);
+    station.setEffectiveFrom(java.time.LocalDate.now());
+    station.setEffectiveTill(null);
+    station.setReason(null);
     station.setDeletedAt(null);
     station.setPermanentDeleteReason(null);
     station.setDeletedBy(null);

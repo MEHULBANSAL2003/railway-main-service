@@ -12,9 +12,9 @@ public class DeactivateCoachRequest {
   private LocalDate effectiveFrom;
 
   // Optional — if set, coach is only suspended between from→to, then reactivates
-  private LocalDate effectiveTo;
+  private LocalDate effectiveTill;
 
   @NotBlank(message = "Reason for deactivation is required.")
   @Size(max = 500)
-  private String changeReason;
+  private String reason;
 }

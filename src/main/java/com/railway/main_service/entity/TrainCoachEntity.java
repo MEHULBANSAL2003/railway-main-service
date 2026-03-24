@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
   name = "train_coaches",
   schema = "railway_main"
 )
-public class TrainCoachEntity {
+public class TrainCoachEntity implements Activatable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,22 +43,15 @@ public class TrainCoachEntity {
   @Builder.Default
   private Integer waitlistLimit = 0;
 
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
-
-  // ── Effective date range ──────────────────────────────
-  // effectiveFrom: config is valid from this date onwards
-  // effectiveTo:   null = still active (no end date)
-  // When config changes → close this row (set effectiveTo) + insert new row
+  // ── Effective date range (renamed: effectiveTo → effectiveTill, changeReason → reason, removed isActive) ──
   @Column(name = "effective_from", nullable = false)
   private LocalDate effectiveFrom;
 
-  @Column(name = "effective_to")
-  private LocalDate effectiveTo;
+  @Column(name = "effective_till")
+  private LocalDate effectiveTill;
 
-  @Column(name = "change_reason", length = 500)
-  private String changeReason;
+  @Column(name = "reason", length = 500)
+  private String reason;
 
   // ── Audit ─────────────────────────────────────────────
   @Column(name = "created_by")
@@ -77,19 +70,9 @@ public class TrainCoachEntity {
   protected void onCreate() {
     createdAt = LocalDateTime.now();
     updatedAt = LocalDateTime.now();
-    // Default effectiveFrom to today if not explicitly set
     if (effectiveFrom == null) effectiveFrom = LocalDate.now();
   }
 
   @PreUpdate
   protected void onUpdate() { updatedAt = LocalDateTime.now(); }
-
-  // ── Derived helper ────────────────────────────────────
-  @Transient
-  public boolean isCurrentlyActive() {
-    LocalDate today = LocalDate.now();
-    return Boolean.TRUE.equals(isActive)
-      && !effectiveFrom.isAfter(today)
-      && (effectiveTo == null || !effectiveTo.isBefore(today));
-  }
 }

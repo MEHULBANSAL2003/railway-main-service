@@ -18,7 +18,10 @@ public class StateMapper {
       .id(entity.getId())
       .code(entity.getCode())
       .name(entity.getName())
-      .isActive(entity.getIsActive())
+      .isActive(entity.isCurrentlyActive())
+      .effectiveFrom(entity.getEffectiveFrom())
+      .effectiveTill(entity.getEffectiveTill())
+      .reason(entity.getReason())
       .createdAt(entity.getCreatedAt())
       .build();
   }

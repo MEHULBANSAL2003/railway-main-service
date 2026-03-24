@@ -30,9 +30,9 @@ public class ChangeCoachConfigRequest {
   private LocalDate effectiveFrom;
 
   // Optional end date
-  private LocalDate effectiveTo;
+  private LocalDate effectiveTill;
 
   @NotBlank(message = "Reason for change is required.")
   @Size(max = 500)
-  private String changeReason;
+  private String reason;
 }

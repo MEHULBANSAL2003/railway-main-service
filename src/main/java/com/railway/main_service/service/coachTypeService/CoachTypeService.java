@@ -1,5 +1,6 @@
 package com.railway.main_service.service.coachTypeService;
 
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.coachType.AddCoachTypeRequest;
 import com.railway.main_service.dto.request.coachType.UpdateCoachTypeRequest;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
@@ -14,7 +15,7 @@ public interface CoachTypeService {
   public CoachTypeResponse updateCoachType(String typeCode, UpdateCoachTypeRequest request);
 
 
-  public CoachTypeResponse toggleStatus(String typeCode, boolean isActive);
+  public CoachTypeResponse changeStatus(String typeCode, ChangeStatusRequest request);
 
   public List<CoachTypeResponse> getAllForDropdown(String search);
 

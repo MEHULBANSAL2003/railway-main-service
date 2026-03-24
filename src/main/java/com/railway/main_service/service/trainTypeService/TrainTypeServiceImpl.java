@@ -3,7 +3,9 @@ package com.railway.main_service.service.trainTypeService;
 import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.trainType.AddTrainTypeRequest;
+import com.railway.main_service.enums.ActiveStatus;
 import com.railway.main_service.dto.request.trainType.SetAllowedCoachesRequest;
 import com.railway.main_service.dto.request.trainType.UpdateTrainTypeRequest;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
@@ -38,13 +40,13 @@ public class TrainTypeServiceImpl implements TrainTypeService {
   public CascadeInfoResponse getCascadeInfo(String typeCode) {
     TrainTypeEntity entity = findByCode(typeCode);
     int activeRules = fareRuleRepository
-      .countByTrainType_TypeCodeAndIsActiveTrue(typeCode.toUpperCase());
+      .countActiveByTrainTypeCode(typeCode.toUpperCase());
     int allowedCoaches = trainTypeCoachRepository.countByTrainType_TypeCode(typeCode.toUpperCase());
     return CascadeInfoResponse.builder()
       .entityType("TRAIN_TYPE")
       .entityCode(entity.getTypeCode())
       .entityName(entity.getTypeName())
-      .currentlyActive(entity.getIsActive())
+      .currentlyActive(entity.isCurrentlyActive())
       .activeFareRulesCount(activeRules)
       .message(activeRules > 0
         ? activeRules + " active fare rule(s) will be deactivated. " +
@@ -56,14 +58,18 @@ public class TrainTypeServiceImpl implements TrainTypeService {
 
   @Override
   @Transactional
-  public TrainTypeResponse toggleStatus(String typeCode, boolean isActive) {
+  public TrainTypeResponse changeStatus(String typeCode, ChangeStatusRequest request) {
     TrainTypeEntity entity = findByCode(typeCode);
-    if (entity.getIsActive().equals(isActive)) return toResponse(entity, null);
-    entity.setIsActive(isActive);
-    entity.setUpdatedBy(SecurityUtils.getCurrentAdminId());
-    trainTypeRepository.save(entity);
+
     String message;
-    if (!isActive) {
+    if (request.getStatus() == ActiveStatus.ACTIVE) {
+      entity.setEffectiveFrom(request.getEffectiveFrom());
+      entity.setEffectiveTill(null);
+      entity.setReason(request.getReason());
+      message = "Train type activated. Linked fare rules were NOT auto-reactivated — re-enable them manually.";
+    } else {
+      entity.setEffectiveTill(request.getEffectiveFrom());
+      entity.setReason(request.getReason());
       int affected = fareRuleRepository
         .deactivateByTrainTypeCode(typeCode.toUpperCase(), SecurityUtils.getCurrentAdminId());
       log.info("CASCADE: {} fare rules deactivated for train type '{}' by admin {}",
@@ -71,9 +77,9 @@ public class TrainTypeServiceImpl implements TrainTypeService {
       message = affected > 0
         ? "Train type deactivated. " + affected + " linked fare rule(s) also deactivated."
         : "Train type deactivated.";
-    } else {
-      message = "Train type activated. Linked fare rules were NOT auto-reactivated.";
     }
+    entity.setUpdatedBy(SecurityUtils.getCurrentAdminId());
+    trainTypeRepository.save(entity);
     return toResponse(entity, message);
   }
 
@@ -149,7 +155,7 @@ public class TrainTypeServiceImpl implements TrainTypeService {
           .findByTypeCode(code.trim().toUpperCase())
           .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "COACH_TYPE_NOT_FOUND",
             "Coach type not found: " + code));
-        if (!ct.getIsActive())
+        if (!ct.isCurrentlyActive())
           throw new BaseException(HttpStatus.BAD_REQUEST, "COACH_TYPE_INACTIVE",
             "Coach type '" + code + "' is inactive.");
         return ct;
@@ -187,7 +193,8 @@ public class TrainTypeServiceImpl implements TrainTypeService {
     return TrainTypeResponse.builder()
       .typeId(e.getTypeId()).typeCode(e.getTypeCode()).typeName(e.getTypeName())
       .description(e.getDescription()).typicalSpeedKmh(e.getTypicalSpeedKmh())
-      .isSuperfast(e.getIsSuperfast()).isActive(e.getIsActive())
+      .isSuperfast(e.getIsSuperfast()).isActive(e.isCurrentlyActive())
+      .effectiveFrom(e.getEffectiveFrom()).effectiveTill(e.getEffectiveTill()).reason(e.getReason())
       .createdBy(e.getCreatedBy()).updatedBy(e.getUpdatedBy())
       .createdAt(e.getCreatedAt()).updatedAt(e.getUpdatedAt()).message(message)
       .build();
@@ -200,7 +207,10 @@ public class TrainTypeServiceImpl implements TrainTypeService {
       .coachTypeName(ct.getTypeName())
       .totalSeats(ct.getTotalSeats())
       .isAc(ct.getIsAc())
-      .isActive(ct.getIsActive())
+      .isActive(ct.isCurrentlyActive())
+      .effectiveFrom(ct.getEffectiveFrom())
+      .effectiveTill(ct.getEffectiveTill())
+      .reason(ct.getReason())
       .build();
   }
 }

@@ -1,5 +1,6 @@
 package com.railway.main_service.service.trainScheduleService;
 
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.trainSchedule.AddTrainScheduleRequest;
 import com.railway.main_service.dto.response.trainSchedule.TrainScheduleResponse;
 import com.railway.main_service.dto.response.trainSchedule.TrainScheduleSummaryResponse;
@@ -13,5 +14,5 @@ public interface TrainScheduleService {
   TrainScheduleResponse createSchedule(String trainNumber, AddTrainScheduleRequest request);
 
   // Toggle isActive on a schedule (cannot toggle RUNNING)
-  TrainScheduleResponse toggleSchedule(String trainNumber, Long scheduleId);
+  TrainScheduleResponse changeScheduleStatus(String trainNumber, Long scheduleId, ChangeStatusRequest request);
 }

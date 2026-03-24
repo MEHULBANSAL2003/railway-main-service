@@ -3,6 +3,7 @@ package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.trainSchedule.AddTrainScheduleRequest;
 import com.railway.main_service.dto.response.trainSchedule.TrainScheduleResponse;
 import com.railway.main_service.dto.response.trainSchedule.TrainScheduleSummaryResponse;
@@ -40,14 +41,14 @@ public class TrainScheduleController {
       ApiResponse.success(scheduleService.createSchedule(trainNumber, request)));
   }
 
-  // PATCH /api/main/trains/{trainNumber}/schedules/{scheduleId}/toggle
-  // Toggle isActive — cannot toggle RUNNING schedule
-  @PostMapping("/{scheduleId}/toggle")
+  // POST /api/main/trains/{trainNumber}/schedules/{scheduleId}/change/status
+  @PostMapping("/{scheduleId}/change/status")
   @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<TrainScheduleResponse>> toggleSchedule(
+  public ResponseEntity<ApiResponse<TrainScheduleResponse>> changeScheduleStatus(
     @PathVariable String trainNumber,
-    @PathVariable Long scheduleId) {
+    @PathVariable Long scheduleId,
+    @Valid @RequestBody ChangeStatusRequest request) {
     return ResponseEntity.ok(
-      ApiResponse.success(scheduleService.toggleSchedule(trainNumber, scheduleId)));
+      ApiResponse.success(scheduleService.changeScheduleStatus(trainNumber, scheduleId, request)));
   }
 }

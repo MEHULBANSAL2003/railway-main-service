@@ -72,7 +72,7 @@ public interface StationRepository
     "JOIN FETCH s.city c " +
     "JOIN FETCH c.state st " +
     "JOIN FETCH s.zone z " +
-    "WHERE s.isActive = true " +
+    "WHERE s.effectiveFrom <= CURRENT_DATE AND (s.effectiveTill IS NULL OR s.effectiveTill > CURRENT_DATE) " +
     "AND s.isPermanentlyDeleted = false " +
     "AND (:search IS NULL OR :search = '' " +
     "  OR LOWER(s.stationCode) LIKE LOWER(CONCAT('%', :search, '%')) " +

@@ -36,7 +36,9 @@ public interface TrainRepository extends JpaRepository<TrainEntity, Long> {
       "JOIN t.zone z " +
       "WHERE (:trainTypeCode IS NULL OR tt.typeCode = CAST(:trainTypeCode AS string)) " +
       "AND   (:zoneCode      IS NULL OR z.code      = CAST(:zoneCode      AS string)) " +
-      "AND   (:isActive      IS NULL OR t.isActive  = :isActive) " +
+      "AND   (:isActive      IS NULL " +
+      "    OR (:isActive = true AND t.effectiveFrom <= CURRENT_DATE AND (t.effectiveTill IS NULL OR t.effectiveTill > CURRENT_DATE)) " +
+      "    OR (:isActive = false AND NOT(t.effectiveFrom <= CURRENT_DATE AND (t.effectiveTill IS NULL OR t.effectiveTill > CURRENT_DATE)))) " +
       "AND   (:search        IS NULL " +
       "    OR LOWER(t.trainNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
       "    OR LOWER(t.trainName)   LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))",
@@ -46,7 +48,9 @@ public interface TrainRepository extends JpaRepository<TrainEntity, Long> {
         "JOIN t.zone z " +
         "WHERE (:trainTypeCode IS NULL OR tt.typeCode = CAST(:trainTypeCode AS string)) " +
         "AND   (:zoneCode      IS NULL OR z.code      = CAST(:zoneCode      AS string)) " +
-        "AND   (:isActive      IS NULL OR t.isActive  = :isActive) " +
+        "AND   (:isActive      IS NULL " +
+        "    OR (:isActive = true AND t.effectiveFrom <= CURRENT_DATE AND (t.effectiveTill IS NULL OR t.effectiveTill > CURRENT_DATE)) " +
+        "    OR (:isActive = false AND NOT(t.effectiveFrom <= CURRENT_DATE AND (t.effectiveTill IS NULL OR t.effectiveTill > CURRENT_DATE)))) " +
         "AND   (:search        IS NULL " +
         "    OR LOWER(t.trainNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
         "    OR LOWER(t.trainName)   LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))"
@@ -63,7 +67,7 @@ public interface TrainRepository extends JpaRepository<TrainEntity, Long> {
   @Query("SELECT t FROM TrainEntity t " +
     "JOIN FETCH t.trainType tt " +
     "JOIN FETCH t.zone z " +
-    "WHERE t.isActive = true " +
+    "WHERE t.effectiveFrom <= CURRENT_DATE AND (t.effectiveTill IS NULL OR t.effectiveTill > CURRENT_DATE) " +
     "AND (:search IS NULL " +
     "  OR LOWER(t.trainNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
     "  OR LOWER(t.trainName)   LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
@@ -71,11 +75,16 @@ public interface TrainRepository extends JpaRepository<TrainEntity, Long> {
   List<TrainEntity> findActiveForDropdown(@Param("search") String search);
 
   // ── Cascade checks ────────────────────────────────────────────────────────
-  int countByTrainType_TypeCodeAndIsActiveTrue(String typeCode);
+  @Query("SELECT COUNT(t) FROM TrainEntity t " +
+    "JOIN t.trainType tt " +
+    "WHERE tt.typeCode = :typeCode " +
+    "AND t.effectiveFrom <= CURRENT_DATE AND (t.effectiveTill IS NULL OR t.effectiveTill > CURRENT_DATE)")
+  int countActiveByTrainTypeCode(@Param("typeCode") String typeCode);
 
   @Query("SELECT COUNT(t) FROM TrainEntity t " +
     "JOIN t.zone z " +
-    "WHERE z.code = :zoneCode AND t.isActive = true")
+    "WHERE z.code = :zoneCode " +
+    "AND t.effectiveFrom <= CURRENT_DATE AND (t.effectiveTill IS NULL OR t.effectiveTill > CURRENT_DATE)")
   int countActiveTrainsByZoneCode(@Param("zoneCode") String zoneCode);
 
   @Query("SELECT t FROM TrainEntity t " +

@@ -33,7 +33,10 @@ public class StationMapper {
       .numPlatforms(entity.getNumPlatforms())
       .latitude(entity.getLatitude())
       .longitude(entity.getLongitude())
-      .isActive(entity.getIsActive())
+      .isActive(entity.isCurrentlyActive())
+      .effectiveFrom(entity.getEffectiveFrom())
+      .effectiveTill(entity.getEffectiveTill())
+      .reason(entity.getReason())
       // Permissions
       .canUpdatedByCurrentAdmin(isSuperAdmin)
       .canDeletedByCurrentAdmin(isSuperAdmin)

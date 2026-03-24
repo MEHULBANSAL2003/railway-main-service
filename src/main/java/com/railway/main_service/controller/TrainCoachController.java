@@ -2,6 +2,7 @@ package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.trainCoach.AddTrainCoachRequest;
 import com.railway.main_service.dto.request.trainCoach.ChangeCoachConfigRequest;
 import com.railway.main_service.dto.request.trainCoach.CopyCoachesRequest;
@@ -59,12 +60,12 @@ public class TrainCoachController {
 
   @PostMapping(ApiConstants.TRAIN_COACH_STATUS)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<TrainCoachResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<TrainCoachResponse>> changeStatus(
     @PathVariable String trainNumber,
     @PathVariable Long coachId,
-    @RequestParam boolean isActive) {
+    @Valid @RequestBody ChangeStatusRequest request) {
     return ResponseEntity.ok(ApiResponse.success(
-      trainCoachService.toggleStatus(trainNumber, coachId, isActive)));
+      trainCoachService.changeStatus(trainNumber, coachId, request)));
   }
 
   @GetMapping(ApiConstants.TRAIN_COACH_AVAILABLE_TYPES)
@@ -95,7 +96,7 @@ public class TrainCoachController {
       trainCoachConfigService.changeConfig(trainNumber, coachId, request)));
   }
 
-  // Sets effectiveTo = effectiveFrom - 1. Removes unbooked future inventory.
+  // Sets effectiveTill = effectiveFrom. Removes unbooked future inventory.
   @PostMapping("/{trainNumber}/{coachId}/deactivate")
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<CoachConfigChangeResponse>> deactivate(
@@ -106,7 +107,7 @@ public class TrainCoachController {
       trainCoachConfigService.deactivate(trainNumber, coachId, request)));
   }
 
-  // Sets effectiveFrom = given date, effectiveTo = null, isActive = true.
+  // Sets effectiveFrom = given date, effectiveTill = null.
   @PostMapping("/{trainNumber}/{coachId}/reactivate")
   @PreAuthorize("hasRole('SUPER_ADMIN')")
   public ResponseEntity<ApiResponse<CoachConfigChangeResponse>> reactivate(

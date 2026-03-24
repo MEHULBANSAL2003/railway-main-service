@@ -1,5 +1,6 @@
 package com.railway.main_service.service.stationService;
 
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.Pagination.PageRequestDto;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
 import com.railway.main_service.dto.request.station.DeleteStationRequest;
@@ -28,7 +29,7 @@ public interface StationService {
   ExcelUploadResult uploadStationsExcel(MultipartFile file);
 
 
-  StationResponse updateActiveInactiveStatus(String stationCode, boolean isActive);
+  StationResponse changeStatus(String stationCode, ChangeStatusRequest request);
 
   AddNewStationResponse updateStationDetails(String stationCode, UpdateStationRequest request);
 

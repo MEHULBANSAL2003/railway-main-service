@@ -2,6 +2,7 @@ package com.railway.main_service.dto.response.train;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
@@ -20,7 +21,11 @@ public class TrainResponse {
   private String  zoneName;
 
   private Boolean pantrycar;
-  private Boolean isActive;
+  private Boolean isActive;       // derived from effectiveFrom/effectiveTill
+
+  private LocalDate effectiveFrom;
+  private LocalDate effectiveTill;
+  private String    reason;
 
   private Long          createdBy;
   private Long          updatedBy;

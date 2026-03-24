@@ -2,6 +2,7 @@ package com.railway.main_service.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -20,7 +21,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TrainEntity {
+public class TrainEntity implements Activatable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -58,9 +59,15 @@ public class TrainEntity {
   @Builder.Default
   private Boolean pantrycar = false;
 
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
+  // ── Effective date range (replaces isActive) ────────────────────────────
+  @Column(name = "effective_from", nullable = false)
+  private LocalDate effectiveFrom;
+
+  @Column(name = "effective_till")
+  private LocalDate effectiveTill;
+
+  @Column(name = "reason", length = 500)
+  private String reason;
 
   @Column(name = "created_by")
   private Long createdBy;
@@ -77,6 +84,7 @@ public class TrainEntity {
   @PrePersist
   protected void onCreate() {
     createdAt = LocalDateTime.now();
+    if (effectiveFrom == null) effectiveFrom = LocalDate.now();
   }
 
   @PreUpdate

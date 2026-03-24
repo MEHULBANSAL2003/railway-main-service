@@ -20,27 +20,44 @@ public interface FareRuleRepository extends JpaRepository<FareRuleEntity, Long> 
     String trainTypeCode, String coachTypeCode, String quotaCode, LocalDate effectiveFrom);
 
   // ── Count active rules linked to a parent — used by cascade warning modal ─
-  int countByCoachType_TypeCodeAndIsActiveTrue(String typeCode);
-  int countByTrainType_TypeCodeAndIsActiveTrue(String typeCode);
-  int countByQuota_QuotaCodeAndIsActiveTrue(String quotaCode);
+  @Query("SELECT COUNT(f) FROM FareRuleEntity f " +
+    "JOIN f.coachType ct " +
+    "WHERE ct.typeCode = :typeCode " +
+    "AND f.effectiveFrom <= CURRENT_DATE AND (f.effectiveTill IS NULL OR f.effectiveTill > CURRENT_DATE)")
+  int countActiveByCoachTypeCode(@Param("typeCode") String typeCode);
+
+  @Query("SELECT COUNT(f) FROM FareRuleEntity f " +
+    "JOIN f.trainType tt " +
+    "WHERE tt.typeCode = :typeCode " +
+    "AND f.effectiveFrom <= CURRENT_DATE AND (f.effectiveTill IS NULL OR f.effectiveTill > CURRENT_DATE)")
+  int countActiveByTrainTypeCode(@Param("typeCode") String typeCode);
+
+  @Query("SELECT COUNT(f) FROM FareRuleEntity f " +
+    "JOIN f.quota q " +
+    "WHERE q.quotaCode = :quotaCode " +
+    "AND f.effectiveFrom <= CURRENT_DATE AND (f.effectiveTill IS NULL OR f.effectiveTill > CURRENT_DATE)")
+  int countActiveByQuotaCode(@Param("quotaCode") String quotaCode);
 
   // ── Cascade deactivation — called when parent is deactivated ──────────────
   // NEVER cascade reactivation — admin must re-enable fare rules manually
   @Modifying
-  @Query("UPDATE FareRuleEntity f SET f.isActive = false, f.updatedBy = :adminId " +
-    "WHERE f.coachType.typeCode = :typeCode AND f.isActive = true")
+  @Query("UPDATE FareRuleEntity f SET f.effectiveTill = CURRENT_DATE, f.reason = 'Cascade: parent deactivated', f.updatedBy = :adminId " +
+    "WHERE f.coachType.typeCode = :typeCode " +
+    "AND f.effectiveFrom <= CURRENT_DATE AND (f.effectiveTill IS NULL OR f.effectiveTill > CURRENT_DATE)")
   int deactivateByCoachTypeCode(@Param("typeCode") String typeCode,
                                 @Param("adminId") Long adminId);
 
   @Modifying
-  @Query("UPDATE FareRuleEntity f SET f.isActive = false, f.updatedBy = :adminId " +
-    "WHERE f.trainType.typeCode = :typeCode AND f.isActive = true")
+  @Query("UPDATE FareRuleEntity f SET f.effectiveTill = CURRENT_DATE, f.reason = 'Cascade: parent deactivated', f.updatedBy = :adminId " +
+    "WHERE f.trainType.typeCode = :typeCode " +
+    "AND f.effectiveFrom <= CURRENT_DATE AND (f.effectiveTill IS NULL OR f.effectiveTill > CURRENT_DATE)")
   int deactivateByTrainTypeCode(@Param("typeCode") String typeCode,
                                 @Param("adminId") Long adminId);
 
   @Modifying
-  @Query("UPDATE FareRuleEntity f SET f.isActive = false, f.updatedBy = :adminId " +
-    "WHERE f.quota.quotaCode = :quotaCode AND f.isActive = true")
+  @Query("UPDATE FareRuleEntity f SET f.effectiveTill = CURRENT_DATE, f.reason = 'Cascade: parent deactivated', f.updatedBy = :adminId " +
+    "WHERE f.quota.quotaCode = :quotaCode " +
+    "AND f.effectiveFrom <= CURRENT_DATE AND (f.effectiveTill IS NULL OR f.effectiveTill > CURRENT_DATE)")
   int deactivateByQuotaCode(@Param("quotaCode") String quotaCode,
                             @Param("adminId") Long adminId);
 
@@ -62,9 +79,8 @@ public interface FareRuleRepository extends JpaRepository<FareRuleEntity, Long> 
     "JOIN FETCH f.trainType tt JOIN FETCH f.coachType ct JOIN FETCH f.quota q " +
     "WHERE tt.typeCode = :trainTypeCode AND ct.typeCode = :coachTypeCode " +
     "AND q.quotaCode = :quotaCode " +
-    "AND f.isActive = true " +
     "AND f.effectiveFrom <= :date " +
-    "AND (f.effectiveUntil IS NULL OR f.effectiveUntil >= :date) " +
+    "AND (f.effectiveTill IS NULL OR f.effectiveTill > :date) " +
     "ORDER BY f.effectiveFrom DESC")
   Optional<FareRuleEntity> findCurrentRule(
     @Param("trainTypeCode") String trainTypeCode,
@@ -83,14 +99,15 @@ public interface FareRuleRepository extends JpaRepository<FareRuleEntity, Long> 
     @Param("coachTypeCode") String coachTypeCode,
     @Param("quotaCode") String quotaCode);
 
-  // ── Open rule (no effectiveUntil) for a combo ─────────────────────────────
+  // ── Open rule (no effectiveTill) for a combo ─────────────────────────────
   // Used when adding a new rule — auto-closes the previous open rule
-  // by setting its effectiveUntil = newRule.effectiveFrom - 1 day
+  // by setting its effectiveTill = newRule.effectiveFrom - 1 day
   @Query("SELECT f FROM FareRuleEntity f " +
     "JOIN f.trainType tt JOIN f.coachType ct JOIN f.quota q " +
     "WHERE tt.typeCode = :trainTypeCode AND ct.typeCode = :coachTypeCode " +
     "AND q.quotaCode = :quotaCode " +
-    "AND f.isActive = true AND f.effectiveUntil IS NULL " +
+    "AND f.effectiveFrom <= CURRENT_DATE AND (f.effectiveTill IS NULL OR f.effectiveTill > CURRENT_DATE) " +
+    "AND f.effectiveTill IS NULL " +
     "ORDER BY f.effectiveFrom DESC")
   Optional<FareRuleEntity> findOpenRule(
     @Param("trainTypeCode") String trainTypeCode,

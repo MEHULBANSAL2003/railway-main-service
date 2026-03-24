@@ -89,7 +89,7 @@ public class CityExcelProcessor {
             ));
 
           // Step 2: Check if state is active
-          if (!state.getIsActive()) {
+          if (!state.isCurrentlyActive()) {
             throw new IllegalArgumentException(
               "State '" + trimmedStateName + "' is inactive. Cannot add cities to an inactive state."
             );
@@ -125,21 +125,10 @@ public class CityExcelProcessor {
             continue;
           }
 
-          // Step 5: Parse is_active (optional, default true)
-          Boolean isActive = true;
-          Cell activeCell = row.getCell(2);
-          if (activeCell != null) {
-            String activeValue = getCellValueAsString(activeCell);
-            if (activeValue != null && !activeValue.trim().isEmpty()) {
-              isActive = parseBoolean(activeValue);
-            }
-          }
-
-          // Step 6: Build CityEntity
+          // Step 5: Build CityEntity (effectiveFrom defaults via @PrePersist)
           CityEntity city = CityEntity.builder()
             .name(trimmedCityName)
             .state(state)
-            .isActive(isActive)
             .build();
 
           citiesToSave.add(city);

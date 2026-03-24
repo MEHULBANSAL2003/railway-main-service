@@ -3,6 +3,7 @@ package com.railway.main_service.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +25,7 @@ import java.util.List;
     @UniqueConstraint(name = "uk_state_name", columnNames = "name")
   }
 )
-public class StateEntity {
+public class StateEntity implements Activatable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,9 +38,15 @@ public class StateEntity {
   @Column(nullable = false, length = 100)
   private String name;   // Maharashtra, Delhi
 
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
+  // ── Effective date range (replaces isActive) ────────────────────────────
+  @Column(name = "effective_from", nullable = false)
+  private LocalDate effectiveFrom;
+
+  @Column(name = "effective_till")
+  private LocalDate effectiveTill;
+
+  @Column(name = "reason", length = 500)
+  private String reason;
 
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
@@ -56,6 +63,7 @@ public class StateEntity {
   protected void onCreate() {
     createdAt = LocalDateTime.now();
     updatedAt = LocalDateTime.now();
+    if (effectiveFrom == null) effectiveFrom = LocalDate.now();
   }
 
   @PreUpdate

@@ -7,6 +7,7 @@ import com.railway.main_service.dto.request.coachType.AddCoachTypeRequest;
 import com.railway.main_service.dto.request.coachType.UpdateCoachTypeRequest;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.coachType.CoachTypeResponse;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.service.coachTypeService.CoachTypeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -49,11 +50,11 @@ public class CoachTypeController {
 
   @PostMapping(ApiConstants.CHANGE_STATUS_COACH_TYPE)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<CoachTypeResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<CoachTypeResponse>> changeStatus(
     @PathVariable String typeCode,
-    @RequestParam boolean isActive) {
+    @Valid @RequestBody ChangeStatusRequest request) {
     return ResponseEntity.ok(ApiResponse.success(
-      coachTypeService.toggleStatus(typeCode, isActive)));
+      coachTypeService.changeStatus(typeCode, request)));
   }
 
   @GetMapping(ApiConstants.GET_COACH_TYPES)

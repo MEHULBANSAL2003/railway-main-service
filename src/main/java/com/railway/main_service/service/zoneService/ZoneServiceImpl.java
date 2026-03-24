@@ -47,7 +47,6 @@ public class ZoneServiceImpl implements ZoneService {
     ZoneEntity zone = ZoneEntity.builder()
       .code(code)
       .name(name)
-      .isActive(true)
       .build();
 
     ZoneEntity savedZone = zoneRepository.save(zone);
@@ -64,7 +63,7 @@ public class ZoneServiceImpl implements ZoneService {
     List<ZoneEntity> zones;
 
     if (searchTerm == null || searchTerm.trim().isEmpty()) {
-      zones = zoneRepository.findByIsActiveTrueOrderByNameAsc();
+      zones = zoneRepository.findAllActiveOrderByNameAsc();
     } else {
       zones = zoneRepository.searchActiveZones(
         searchTerm.trim().toLowerCase()
@@ -81,7 +80,10 @@ public class ZoneServiceImpl implements ZoneService {
       .id(zone.getId())
       .code(zone.getCode())
       .name(zone.getName())
-      .isActive(zone.getIsActive())
+      .isActive(zone.isCurrentlyActive())
+      .effectiveFrom(zone.getEffectiveFrom())
+      .effectiveTill(zone.getEffectiveTill())
+      .reason(zone.getReason())
       .createdAt(zone.getCreatedAt())
       .build();
   }

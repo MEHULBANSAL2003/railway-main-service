@@ -28,12 +28,9 @@ public interface TrainTypeRepository extends JpaRepository<TrainTypeEntity, Long
     "ORDER BY t.typeCode ASC")
   List<TrainTypeEntity> findAllForAdmin(@Param("search") String search);
 
-//  // Dropdown — active only
-//  List<TrainTypeEntity> findAllByIsActiveTrueOrderByTypeCodeAsc(@Param("search") String search);
-
   @Query("""
 SELECT t FROM TrainTypeEntity t
-WHERE t.isActive = true
+WHERE t.effectiveFrom <= CURRENT_DATE AND (t.effectiveTill IS NULL OR t.effectiveTill > CURRENT_DATE)
 AND (
   :search IS NULL OR
   LOWER(t.typeCode) LIKE LOWER(CONCAT(CAST(:search AS string), '%')) OR

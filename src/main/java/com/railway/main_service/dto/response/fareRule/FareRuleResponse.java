@@ -27,7 +27,8 @@ public class FareRuleResponse {
   private BigDecimal superfastCharge;
   private BigDecimal gstPct;
   private LocalDate effectiveFrom;
-  private LocalDate effectiveUntil;
+  private LocalDate effectiveTill;
+  private String reason;
   private Boolean isActive;
   private Boolean isCurrent;
   private BigDecimal tatkalCharge;

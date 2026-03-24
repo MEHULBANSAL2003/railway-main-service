@@ -1,5 +1,6 @@
 package com.railway.main_service.service.trainTypeService;
 
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.trainType.AddTrainTypeRequest;
 import com.railway.main_service.dto.request.trainType.SetAllowedCoachesRequest;
 import com.railway.main_service.dto.request.trainType.UpdateTrainTypeRequest;
@@ -14,7 +15,7 @@ public interface TrainTypeService {
   // ── Existing ──────────────────────────────────────────────
   TrainTypeResponse  addTrainType(AddTrainTypeRequest request);
   TrainTypeResponse  updateTrainType(String typeCode, UpdateTrainTypeRequest request);
-  TrainTypeResponse  toggleStatus(String typeCode, boolean isActive);
+  TrainTypeResponse  changeStatus(String typeCode, ChangeStatusRequest request);
   CascadeInfoResponse getCascadeInfo(String typeCode);
   List<TrainTypeResponse> getAllForDropdown(String search);
   List<TrainTypeResponse> getAllForAdmin(String search);

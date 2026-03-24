@@ -21,12 +21,15 @@ public interface CoachTypeRepository extends JpaRepository<CoachTypeEntity, Long
 
   Optional<CoachTypeEntity> findByTypeCode(String typeCode);
 
-  List<CoachTypeEntity> findAllByIsActiveTrueOrderByTypeCodeAsc();
+  @Query("SELECT c FROM CoachTypeEntity c " +
+    "WHERE c.effectiveFrom <= CURRENT_DATE AND (c.effectiveTill IS NULL OR c.effectiveTill > CURRENT_DATE) " +
+    "ORDER BY c.typeCode ASC")
+  List<CoachTypeEntity> findAllActiveOrderByTypeCodeAsc();
 
 
   @Query("""
 SELECT c FROM CoachTypeEntity c
-WHERE c.isActive = true
+WHERE c.effectiveFrom <= CURRENT_DATE AND (c.effectiveTill IS NULL OR c.effectiveTill > CURRENT_DATE)
 AND (
   :search IS NULL OR
   LOWER(c.typeCode) LIKE LOWER(CONCAT(CAST(:search AS string), '%')) OR
@@ -43,5 +46,8 @@ ORDER BY c.typeCode ASC
     "ORDER BY c.typeCode ASC")
   List<CoachTypeEntity> findAllForAdmin(@Param("search") String search);
 
-  List<CoachTypeEntity> findAllByTypeIdInAndIsActiveTrue(List<Long> typeIds);
+  @Query("SELECT c FROM CoachTypeEntity c " +
+    "WHERE c.typeId IN :typeIds " +
+    "AND c.effectiveFrom <= CURRENT_DATE AND (c.effectiveTill IS NULL OR c.effectiveTill > CURRENT_DATE)")
+  List<CoachTypeEntity> findAllActiveByTypeIdIn(@Param("typeIds") List<Long> typeIds);
 }

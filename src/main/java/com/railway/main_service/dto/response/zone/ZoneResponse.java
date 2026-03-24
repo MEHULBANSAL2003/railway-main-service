@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -18,5 +19,8 @@ public class ZoneResponse {
   private String code;
   private String name;
   private Boolean isActive;
+  private LocalDate effectiveFrom;
+  private LocalDate effectiveTill;
+  private String reason;
   private LocalDateTime createdAt;
 }

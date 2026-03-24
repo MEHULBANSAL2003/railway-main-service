@@ -17,6 +17,9 @@ public class TrainScheduleResponse {
   private LocalDate    startDate;
   private LocalDate    endDate;       // null = indefinite
   private Boolean      isActive;
+  private LocalDate    effectiveFrom;
+  private LocalDate    effectiveTill;
+  private String       reason;
   private String       status;        // RUNNING | UPCOMING | PAST | DEACTIVATED
   private List<String> addedDays;     // diff vs previous (history only)
   private List<String> removedDays;   // diff vs previous (history only)

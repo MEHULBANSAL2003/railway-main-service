@@ -41,7 +41,7 @@ public class StateServiceImpl implements StateService{
     List<StateEntity> states;
 
     if (searchTerm == null || searchTerm.trim().isEmpty()) {
-      states = stateRepository.findByIsActiveTrue();
+      states = stateRepository.findAllActive();
     } else {
       states = stateRepository.searchActiveStates(searchTerm.trim());
     }
@@ -56,7 +56,10 @@ public class StateServiceImpl implements StateService{
       .id(state.getId())
       .code(state.getCode())
       .name(state.getName())
-      .isActive(state.getIsActive())
+      .isActive(state.isCurrentlyActive())
+      .effectiveFrom(state.getEffectiveFrom())
+      .effectiveTill(state.getEffectiveTill())
+      .reason(state.getReason())
       .build();
   }
 }

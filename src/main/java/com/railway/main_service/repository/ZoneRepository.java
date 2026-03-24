@@ -18,7 +18,7 @@ public interface ZoneRepository extends JpaRepository<ZoneEntity, Long> {
 
   @Query("""
         SELECT z FROM ZoneEntity z
-        WHERE z.isActive = true
+        WHERE z.effectiveFrom <= CURRENT_DATE AND (z.effectiveTill IS NULL OR z.effectiveTill > CURRENT_DATE)
         AND (
             LOWER(z.name) LIKE CONCAT(:searchTerm, '%')
             OR LOWER(z.code) LIKE CONCAT(:searchTerm, '%')
@@ -26,7 +26,10 @@ public interface ZoneRepository extends JpaRepository<ZoneEntity, Long> {
     """)
   List<ZoneEntity> searchActiveZones(String searchTerm);
 
-  List<ZoneEntity> findByIsActiveTrueOrderByNameAsc();
+  @Query("SELECT z FROM ZoneEntity z " +
+    "WHERE z.effectiveFrom <= CURRENT_DATE AND (z.effectiveTill IS NULL OR z.effectiveTill > CURRENT_DATE) " +
+    "ORDER BY z.name ASC")
+  List<ZoneEntity> findAllActiveOrderByNameAsc();
 
   Optional<ZoneEntity> findByCode(String zoneCode);
 

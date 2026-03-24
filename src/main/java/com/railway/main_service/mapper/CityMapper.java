@@ -21,7 +21,10 @@ public class CityMapper {
       .stateId(entity.getState().getId())
       .stateName(entity.getState().getName())
       .stateCode(entity.getState().getCode())
-      .isActive(entity.getIsActive())
+      .isActive(entity.isCurrentlyActive())
+      .effectiveFrom(entity.getEffectiveFrom())
+      .effectiveTill(entity.getEffectiveTill())
+      .reason(entity.getReason())
       .createdAt(entity.getCreatedAt())
       .updatedAt(entity.getUpdatedAt())
       .build();
@@ -38,7 +41,10 @@ public class CityMapper {
       .stateId(entity.getState().getId())
       .stateName(entity.getState().getName())
       .stateCode(entity.getState().getCode())
-      .isActive(entity.getIsActive())
+      .isActive(entity.isCurrentlyActive())
+      .effectiveFrom(entity.getEffectiveFrom())
+      .effectiveTill(entity.getEffectiveTill())
+      .reason(entity.getReason())
       .createdAt(entity.getCreatedAt())
       .message("City added successfully")
       .build();

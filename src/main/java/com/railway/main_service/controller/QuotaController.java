@@ -2,6 +2,7 @@ package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.quota.AddQuotaRequest;
 import com.railway.main_service.dto.request.quota.UpdateQuotaRequest;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
@@ -42,11 +43,11 @@ public class QuotaController {
 
   @PostMapping(ApiConstants.QUOTA_STATUS)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<QuotaResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<QuotaResponse>> changeStatus(
     @PathVariable String quotaCode,
-    @RequestParam boolean isActive) {
+    @Valid @RequestBody ChangeStatusRequest request) {
     return ResponseEntity.ok(ApiResponse.success(
-      quotaService.toggleStatus(quotaCode, isActive)));
+      quotaService.changeStatus(quotaCode, request)));
   }
 
   @GetMapping(ApiConstants.GET_QUOTAS_DROPDOWN)

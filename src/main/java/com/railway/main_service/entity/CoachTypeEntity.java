@@ -1,20 +1,8 @@
 package com.railway.main_service.entity;
 
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -24,7 +12,7 @@ import java.time.LocalDateTime;
 @Builder
 @Entity
 @Table(name = "coach_types", schema = "railway_main")
-public class CoachTypeEntity {
+public class CoachTypeEntity implements Activatable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,9 +35,15 @@ public class CoachTypeEntity {
   @Builder.Default
   private Boolean isAc = false;
 
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
+  // ── Effective date range (replaces isActive) ────────────────────────────
+  @Column(name = "effective_from", nullable = false)
+  private LocalDate effectiveFrom;
+
+  @Column(name = "effective_till")
+  private LocalDate effectiveTill;
+
+  @Column(name = "reason", length = 500)
+  private String reason;
 
   @Column(name = "created_by")
   private Long createdBy;
@@ -67,6 +61,7 @@ public class CoachTypeEntity {
   protected void onCreate() {
     createdAt = LocalDateTime.now();
     updatedAt = LocalDateTime.now();
+    if (effectiveFrom == null) effectiveFrom = LocalDate.now();
   }
 
   @PreUpdate

@@ -1,5 +1,6 @@
 package com.railway.main_service.service.trainService;
 
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.train.AddTrainRequest;
 import com.railway.main_service.dto.request.train.UpdateTrainRequest;
 import com.railway.main_service.dto.response.PageResponse;
@@ -17,7 +18,7 @@ public interface TrainService {
 
   TrainResponse updateTrain(String trainNumber, UpdateTrainRequest request);
 
-  TrainResponse toggleStatus(String trainNumber, boolean isActive);
+  TrainResponse changeStatus(String trainNumber, ChangeStatusRequest request);
 
   CascadeInfoResponse getCascadeInfo(String trainNumber);
 

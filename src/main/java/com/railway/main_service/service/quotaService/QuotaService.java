@@ -1,5 +1,6 @@
 package com.railway.main_service.service.quotaService;
 
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.quota.AddQuotaRequest;
 import com.railway.main_service.dto.request.quota.UpdateQuotaRequest;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
@@ -13,7 +14,7 @@ public interface QuotaService {
 
   public QuotaResponse updateQuota(String quotaCode, UpdateQuotaRequest request);
 
-  public QuotaResponse toggleStatus(String quotaCode, boolean isActive);
+  public QuotaResponse changeStatus(String quotaCode, ChangeStatusRequest request);
 
   public List<QuotaResponse> getAllForDropdown();
 

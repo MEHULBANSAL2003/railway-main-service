@@ -3,8 +3,10 @@ package com.railway.main_service.service.trainCoachService;
 import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.trainCoach.AddTrainCoachRequest;
 import com.railway.main_service.dto.request.trainCoach.UpdateTrainCoachRequest;
+import com.railway.main_service.enums.ActiveStatus;
 import com.railway.main_service.dto.response.trainCoach.CoachTypeDropdownResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCoachResponse;
 import com.railway.main_service.dto.response.trainCoach.TrainCopyCoachesResponse;
@@ -61,10 +63,9 @@ public class TrainCoachServiceImpl implements TrainCoachService {
       .tatkalSeats(req.getTatkalSeats())
       .racSeats(req.getRacSeats())
       .waitlistLimit(req.getWaitlistLimit())
-      .isActive(true)
       .effectiveFrom(effectiveFrom)
-      .effectiveTo(req.getEffectiveTo())
-      .changeReason(req.getChangeReason())
+      .effectiveTill(req.getEffectiveTill())
+      .reason(req.getReason())
       .createdBy(SecurityUtils.getCurrentAdminId())
       .build();
 
@@ -97,14 +98,20 @@ public class TrainCoachServiceImpl implements TrainCoachService {
 
   @Override
   @Transactional
-  public TrainCoachResponse toggleStatus(String trainNumber, Long coachId, boolean isActive) {
+  public TrainCoachResponse changeStatus(String trainNumber, Long coachId, ChangeStatusRequest request) {
     TrainEntity      train = findActiveTrain(trainNumber);
     TrainCoachEntity e     = findCoach(coachId, train.getTrainId());
-    if (e.getIsActive().equals(isActive)) return toResponse(e, null);
-    e.setIsActive(isActive);
+    if (request.getStatus() == ActiveStatus.ACTIVE) {
+        e.setEffectiveFrom(request.getEffectiveFrom());
+        e.setEffectiveTill(null);
+        e.setReason(request.getReason());
+    } else {
+        e.setEffectiveTill(request.getEffectiveFrom());
+        e.setReason(request.getReason());
+    }
     e.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     trainCoachRepository.save(e);
-    return toResponse(e, isActive ? "Coach activated." : "Coach deactivated.");
+    return toResponse(e, request.getStatus() == ActiveStatus.ACTIVE ? "Coach activated." : "Coach deactivated.");
   }
 
   @Override
@@ -133,7 +140,7 @@ public class TrainCoachServiceImpl implements TrainCoachService {
 
   private TrainEntity findActiveTrain(String trainNumber) {
     TrainEntity train = findTrainByNumber(trainNumber);
-    if (!train.getIsActive())
+    if (!train.isCurrentlyActive())
       throw new BaseException(HttpStatus.BAD_REQUEST, "TRAIN_INACTIVE",
         "Train " + trainNumber + " is inactive.");
     return train;
@@ -149,7 +156,7 @@ public class TrainCoachServiceImpl implements TrainCoachService {
     CoachTypeEntity ct = coachTypeRepository.findByTypeCode(typeCode.trim().toUpperCase())
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "COACH_TYPE_NOT_FOUND",
         "Coach type not found: " + typeCode));
-    if (!ct.getIsActive())
+    if (!ct.isCurrentlyActive())
       throw new BaseException(HttpStatus.BAD_REQUEST, "COACH_TYPE_INACTIVE",
         "Coach type '" + typeCode + "' is inactive.");
     return ct;
@@ -176,13 +183,9 @@ public class TrainCoachServiceImpl implements TrainCoachService {
           " exceeds total seats per coach (" + total + ") for type '" + typeCode + "'.");
   }
 
-  // isActive is DERIVED from dates — not the DB flag
   private TrainCoachResponse toResponse(TrainCoachEntity e, String message) {
     int totalSeats = e.getCoachType().getTotalSeats();
     int count      = e.getCoachCount();
-    LocalDate today = LocalDate.now();
-    boolean derivedActive = !e.getEffectiveFrom().isAfter(today)
-      && (e.getEffectiveTo() == null || !e.getEffectiveTo().isBefore(today));
 
     return TrainCoachResponse.builder()
       .coachId(e.getCoachId())
@@ -202,9 +205,9 @@ public class TrainCoachServiceImpl implements TrainCoachService {
       .totalTatkalSeats(count * e.getTatkalSeats())
       .totalRacSeats(count * e.getRacSeats())
       .effectiveFrom(e.getEffectiveFrom())
-      .effectiveTo(e.getEffectiveTo())
-      .changeReason(e.getChangeReason())
-      .isActive(derivedActive)
+      .effectiveTill(e.getEffectiveTill())
+      .reason(e.getReason())
+      .isActive(e.isCurrentlyActive())
       .createdBy(e.getCreatedBy())
       .updatedBy(e.getUpdatedBy())
       .createdAt(e.getCreatedAt())
@@ -229,7 +232,7 @@ public class TrainCoachServiceImpl implements TrainCoachService {
       .toList();
     if (availableIds.isEmpty()) return List.of();
 
-    return coachTypeRepository.findAllByTypeIdInAndIsActiveTrue(availableIds).stream()
+    return coachTypeRepository.findAllActiveByTypeIdIn(availableIds).stream()
       .sorted(Comparator.comparing(CoachTypeEntity::getTypeCode))
       .map(ct -> CoachTypeDropdownResponse.builder()
         .typeId(ct.getTypeId())
@@ -275,7 +278,6 @@ public class TrainCoachServiceImpl implements TrainCoachService {
         .tatkalSeats(src.getTatkalSeats())
         .racSeats(src.getRacSeats())
         .waitlistLimit(src.getWaitlistLimit())
-        .isActive(src.getIsActive())
         .createdBy(adminId)
         .build())
       .toList();

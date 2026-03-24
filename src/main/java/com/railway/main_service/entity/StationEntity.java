@@ -4,6 +4,7 @@ import com.railway.main_service.enums.StationType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -24,7 +25,7 @@ import java.time.LocalDateTime;
     @UniqueConstraint(name = "uk_station_code", columnNames = "station_code")
   }
 )
-public class StationEntity {
+public class StationEntity implements Activatable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,9 +68,15 @@ public class StationEntity {
   @Column(name = "longitude")
   private Double longitude;
 
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
+  // ── Effective date range (replaces isActive) ────────────────────────────
+  @Column(name = "effective_from", nullable = false)
+  private LocalDate effectiveFrom;
+
+  @Column(name = "effective_till")
+  private LocalDate effectiveTill;
+
+  @Column(name = "reason", length = 500)
+  private String reason;
 
   @Column(name = "num_platforms", nullable = false)
   private Integer numPlatforms;
@@ -103,6 +110,7 @@ public class StationEntity {
   protected void onCreate() {
     createdAt = LocalDateTime.now();
     updatedAt = LocalDateTime.now();
+    if (effectiveFrom == null) effectiveFrom = LocalDate.now();
   }
 
   @PreUpdate

@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -22,6 +23,9 @@ public class TrainTypeResponse {
   private Integer typicalSpeedKmh;
   private Boolean isSuperfast;
   private Boolean isActive;
+  private LocalDate effectiveFrom;
+  private LocalDate effectiveTill;
+  private String reason;
   private Long createdBy;
   private Long updatedBy;
   private LocalDateTime createdAt;

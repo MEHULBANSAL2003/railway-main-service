@@ -36,8 +36,8 @@ public class TrainCoachResponse {
 
   // Effective date range
   private LocalDate effectiveFrom;
-  private LocalDate effectiveTo;        // null = currently open / active
-  private String    changeReason;
+  private LocalDate effectiveTill;      // null = currently open / active
+  private String    reason;
 
   // Status
   private Boolean isActive;

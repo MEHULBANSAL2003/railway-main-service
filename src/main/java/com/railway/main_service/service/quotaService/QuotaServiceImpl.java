@@ -3,9 +3,11 @@ package com.railway.main_service.service.quotaService;
 import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.quota.AddQuotaRequest;
 import com.railway.main_service.dto.request.quota.UpdateQuotaRequest;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
+import com.railway.main_service.enums.ActiveStatus;
 import com.railway.main_service.dto.response.quota.QuotaResponse;
 import com.railway.main_service.entity.QuotaEntity;
 import com.railway.main_service.repository.FareRuleRepository;
@@ -28,12 +30,12 @@ public class QuotaServiceImpl implements QuotaService {
   public CascadeInfoResponse getCascadeInfo(String quotaCode) {
     QuotaEntity entity = findByCode(quotaCode);
     int activeRules = fareRuleRepository
-      .countByQuota_QuotaCodeAndIsActiveTrue(quotaCode.toUpperCase());
+      .countActiveByQuotaCode(quotaCode.toUpperCase());
     return CascadeInfoResponse.builder()
       .entityType("QUOTA")
       .entityCode(entity.getQuotaCode())
       .entityName(entity.getQuotaName())
-      .currentlyActive(entity.getIsActive())
+      .currentlyActive(entity.isCurrentlyActive())
       .activeFareRulesCount(activeRules)
       .message(activeRules > 0
         ? activeRules + " active fare rule(s) will be deactivated."
@@ -42,27 +44,31 @@ public class QuotaServiceImpl implements QuotaService {
   }
 
   @Override @Transactional
-  public QuotaResponse toggleStatus(String quotaCode, boolean isActive) {
+  public QuotaResponse changeStatus(String quotaCode, ChangeStatusRequest request) {
     QuotaEntity entity = findByCode(quotaCode);
 
-    if (entity.getIsActive().equals(isActive))
-      return toResponse(entity, null);
-
-    entity.setIsActive(isActive);
+    if (request.getStatus() == ActiveStatus.ACTIVE) {
+        entity.setEffectiveFrom(request.getEffectiveFrom());
+        entity.setEffectiveTill(null);
+        entity.setReason(request.getReason());
+    } else {
+        entity.setEffectiveTill(request.getEffectiveFrom());
+        entity.setReason(request.getReason());
+    }
     entity.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     quotaRepository.save(entity);
 
     String message;
-    if (!isActive) {
-      int affected = fareRuleRepository
-        .deactivateByQuotaCode(quotaCode.toUpperCase(), SecurityUtils.getCurrentAdminId());
-      log.info("CASCADE: {} fare rules deactivated for quota '{}' by admin {}",
-        affected, quotaCode, SecurityUtils.getCurrentAdminId());
-      message = affected > 0
-        ? "Quota deactivated. " + affected + " linked fare rule(s) also deactivated."
-        : "Quota deactivated.";
+    if (request.getStatus() == ActiveStatus.INACTIVE) {
+        int affected = fareRuleRepository
+            .deactivateByQuotaCode(quotaCode.toUpperCase(), SecurityUtils.getCurrentAdminId());
+        log.info("CASCADE: {} fare rules deactivated for quota '{}' by admin {}",
+            affected, quotaCode, SecurityUtils.getCurrentAdminId());
+        message = affected > 0
+            ? "Quota deactivated. " + affected + " linked fare rule(s) also deactivated."
+            : "Quota deactivated.";
     } else {
-      message = "Quota activated. Linked fare rules were NOT auto-reactivated — re-enable them manually from Fare Rules page.";
+        message = "Quota activated. Linked fare rules were NOT auto-reactivated — re-enable them manually from Fare Rules page.";
     }
 
     return toResponse(entity, message);
@@ -103,7 +109,7 @@ public class QuotaServiceImpl implements QuotaService {
 
   @Override
   public List<QuotaResponse> getAllForDropdown() {
-    return quotaRepository.findAllByIsActiveTrueOrderByQuotaCodeAsc()
+    return quotaRepository.findAllActiveOrderByQuotaCodeAsc()
       .stream().map(e -> toResponse(e, null)).toList();
   }
 
@@ -122,7 +128,8 @@ public class QuotaServiceImpl implements QuotaService {
   private QuotaResponse toResponse(QuotaEntity e, String message) {
     return QuotaResponse.builder()
       .quotaId(e.getQuotaId()).quotaCode(e.getQuotaCode()).quotaName(e.getQuotaName())
-      .description(e.getDescription()).isActive(e.getIsActive())
+      .description(e.getDescription()).isActive(e.isCurrentlyActive())
+      .effectiveFrom(e.getEffectiveFrom()).effectiveTill(e.getEffectiveTill()).reason(e.getReason())
       .createdBy(e.getCreatedBy()).updatedBy(e.getUpdatedBy())
       .createdAt(e.getCreatedAt()).updatedAt(e.getUpdatedAt()).message(message)
       .build();

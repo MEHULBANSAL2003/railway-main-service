@@ -5,7 +5,9 @@ import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
 import com.railway.main_service.dto.request.coachType.AddCoachTypeRequest;
 import com.railway.main_service.dto.request.coachType.UpdateCoachTypeRequest;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
+import com.railway.main_service.enums.ActiveStatus;
 import com.railway.main_service.dto.response.coachType.CoachTypeResponse;
 import com.railway.main_service.entity.CoachTypeEntity;
 import com.railway.main_service.repository.CoachTypeRepository;
@@ -29,12 +31,12 @@ public class CoachTypeServiceImpl implements CoachTypeService {
   public CascadeInfoResponse getCascadeInfo(String typeCode) {
     CoachTypeEntity entity = findByCode(typeCode);
     int activeRules = fareRuleRepository
-      .countByCoachType_TypeCodeAndIsActiveTrue(typeCode.toUpperCase());
+      .countActiveByCoachTypeCode(typeCode.toUpperCase());
     return CascadeInfoResponse.builder()
       .entityType("COACH_TYPE")
       .entityCode(entity.getTypeCode())
       .entityName(entity.getTypeName())
-      .currentlyActive(entity.getIsActive())
+      .currentlyActive(entity.isCurrentlyActive())
       .activeFareRulesCount(activeRules)
       .message(activeRules > 0
         ? activeRules + " active fare rule(s) will be deactivated."
@@ -44,29 +46,31 @@ public class CoachTypeServiceImpl implements CoachTypeService {
 
   @Override
   @Transactional
-  public CoachTypeResponse toggleStatus(String typeCode, boolean isActive) {
+  public CoachTypeResponse changeStatus(String typeCode, ChangeStatusRequest request) {
     CoachTypeEntity entity = findByCode(typeCode);
 
-    if (entity.getIsActive().equals(isActive))
-      return toResponse(entity, null);
-
-    entity.setIsActive(isActive);
+    if (request.getStatus() == ActiveStatus.ACTIVE) {
+        entity.setEffectiveFrom(request.getEffectiveFrom());
+        entity.setEffectiveTill(null);
+        entity.setReason(request.getReason());
+    } else {
+        entity.setEffectiveTill(request.getEffectiveFrom());
+        entity.setReason(request.getReason());
+    }
     entity.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     coachTypeRepository.save(entity);
 
     String message;
-    if (!isActive) {
-      // Cascade: deactivate all linked fare rules
-      int affected = fareRuleRepository
-        .deactivateByCoachTypeCode(typeCode.toUpperCase(), SecurityUtils.getCurrentAdminId());
-      log.info("CASCADE: {} fare rules deactivated for coach type '{}' by admin {}",
-        affected, typeCode, SecurityUtils.getCurrentAdminId());
-      message = affected > 0
-        ? "Coach type deactivated. " + affected + " linked fare rule(s) also deactivated."
-        : "Coach type deactivated.";
+    if (request.getStatus() == ActiveStatus.INACTIVE) {
+        int affected = fareRuleRepository
+            .deactivateByCoachTypeCode(typeCode.toUpperCase(), SecurityUtils.getCurrentAdminId());
+        log.info("CASCADE: {} fare rules deactivated for coach type '{}' by admin {}",
+            affected, typeCode, SecurityUtils.getCurrentAdminId());
+        message = affected > 0
+            ? "Coach type deactivated. " + affected + " linked fare rule(s) also deactivated."
+            : "Coach type deactivated.";
     } else {
-      // Reactivation: NEVER auto-reactivate fare rules
-      message = "Coach type activated. Linked fare rules were NOT auto-reactivated — re-enable them manually from Fare Rules page.";
+        message = "Coach type activated. Linked fare rules were NOT auto-reactivated — re-enable them manually from Fare Rules page.";
     }
 
     return toResponse(entity, message);
@@ -135,7 +139,8 @@ public class CoachTypeServiceImpl implements CoachTypeService {
     return CoachTypeResponse.builder()
       .typeId(e.getTypeId()).typeCode(e.getTypeCode()).typeName(e.getTypeName())
       .description(e.getDescription()).totalSeats(e.getTotalSeats()).isAc(e.getIsAc())
-      .isActive(e.getIsActive()).createdBy(e.getCreatedBy()).updatedBy(e.getUpdatedBy())
+      .isActive(e.isCurrentlyActive()).effectiveFrom(e.getEffectiveFrom()).effectiveTill(e.getEffectiveTill()).reason(e.getReason())
+      .createdBy(e.getCreatedBy()).updatedBy(e.getUpdatedBy())
       .createdAt(e.getCreatedAt()).updatedAt(e.getUpdatedAt()).message(message)
       .build();
   }

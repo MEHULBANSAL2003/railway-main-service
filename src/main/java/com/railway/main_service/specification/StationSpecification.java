@@ -6,6 +6,7 @@ import com.railway.main_service.enums.StationType;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,8 +62,18 @@ public class StationSpecification {
         predicates.add(cb.equal(root.get("stationType"),
           StationType.valueOf(filter.getStationType().trim().toUpperCase())));
 
-      if (filter.getIsActive() != null)
-        predicates.add(cb.equal(root.get("isActive"), filter.getIsActive()));
+      if (filter.getIsActive() != null) {
+        LocalDate today = LocalDate.now();
+        Predicate fromPred = cb.lessThanOrEqualTo(root.get("effectiveFrom"), today);
+        Predicate tillNull = cb.isNull(root.get("effectiveTill"));
+        Predicate tillFuture = cb.greaterThan(root.get("effectiveTill"), today);
+        Predicate activePred = cb.and(fromPred, cb.or(tillNull, tillFuture));
+        if (filter.getIsActive()) {
+          predicates.add(activePred);
+        } else {
+          predicates.add(cb.not(activePred));
+        }
+      }
 
       return cb.and(predicates.toArray(new Predicate[0]));
     };

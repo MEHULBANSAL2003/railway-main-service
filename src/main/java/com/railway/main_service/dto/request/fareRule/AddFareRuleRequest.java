@@ -53,5 +53,5 @@ public class AddFareRuleRequest {
   @NotNull(message = "Effective from date is required.")
   private LocalDate effectiveFrom;
 
-  private LocalDate effectiveUntil;
+  private LocalDate effectiveTill;
 }

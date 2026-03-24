@@ -2,6 +2,7 @@ package com.railway.main_service.dto.response.coachType;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -17,6 +18,9 @@ public class CoachTypeResponse {
   private Integer totalSeats;
   private Boolean isAc;
   private Boolean isActive;
+  private LocalDate effectiveFrom;
+  private LocalDate effectiveTill;
+  private String reason;
   private Long createdBy;
   private Long updatedBy;
   private LocalDateTime createdAt;

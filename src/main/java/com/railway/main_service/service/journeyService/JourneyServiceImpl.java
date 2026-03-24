@@ -209,7 +209,7 @@ public class JourneyServiceImpl implements JourneyService {
     if (trainStopRepository.countByTrain_TrainId(train.getTrainId()) < 2)
       throw new BaseException(HttpStatus.BAD_REQUEST, "INSUFFICIENT_STOPS",
         "Train " + train.getTrainNumber() + " must have at least 2 stops");
-    if (trainCoachRepository.countByTrain_TrainIdAndIsActiveTrue(train.getTrainId()) == 0)
+    if (trainCoachRepository.countActiveByTrainId(train.getTrainId()) == 0)
       throw new BaseException(HttpStatus.BAD_REQUEST, "NO_ACTIVE_COACHES",
         "Train " + train.getTrainNumber() + " must have at least one active coach");
   }

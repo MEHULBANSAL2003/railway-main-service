@@ -193,20 +193,10 @@ public class StateExcelProcessor {
     String name = getCellValueAsString(row.getCell(1));
     validateName(name);
 
-    // Column 2: is_active (OPTIONAL, default true)
-    Boolean isActive = true;
-    Cell activeCell = row.getCell(2);
-    if (activeCell != null) {
-      String activeValue = getCellValueAsString(activeCell);
-      if (activeValue != null && !activeValue.trim().isEmpty()) {
-        isActive = parseBoolean(activeValue);
-      }
-    }
-
+    // effectiveFrom defaults via @PrePersist
     return StateEntity.builder()
       .code(code.trim().toUpperCase())
       .name(name.trim())
-      .isActive(isActive)
       .build();
   }
 

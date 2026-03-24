@@ -15,7 +15,7 @@ import java.util.Set;
   name   = "train_schedules",
   schema = "railway_main"
 )
-public class TrainScheduleEntity {
+public class TrainScheduleEntity implements Activatable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,9 +38,15 @@ public class TrainScheduleEntity {
   @Column(name = "end_date")
   private LocalDate endDate;
 
-  @Column(name = "is_active", nullable = false)
-  @Builder.Default
-  private Boolean isActive = true;
+  // ── Effective date range (replaces isActive) ────────────────────────────
+  @Column(name = "effective_from", nullable = false)
+  private LocalDate effectiveFrom;
+
+  @Column(name = "effective_till")
+  private LocalDate effectiveTill;
+
+  @Column(name = "reason", length = 500)
+  private String reason;
 
   @Column(name = "created_by")
   private Long createdBy;
@@ -58,6 +64,7 @@ public class TrainScheduleEntity {
   protected void onCreate() {
     createdAt = LocalDateTime.now();
     updatedAt = LocalDateTime.now();
+    if (effectiveFrom == null) effectiveFrom = LocalDate.now();
   }
 
   @PreUpdate

@@ -3,8 +3,10 @@ package com.railway.main_service.service.trainService;
 import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.train.AddTrainRequest;
 import com.railway.main_service.dto.request.train.UpdateTrainRequest;
+import com.railway.main_service.enums.ActiveStatus;
 import com.railway.main_service.dto.response.PageResponse;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.train.BulkUploadResponse;
@@ -63,7 +65,7 @@ public class TrainServiceImpl implements TrainService {
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "TRAIN_TYPE_NOT_FOUND",
         "Train type not found: " + typeCode));
 
-    if (!trainType.getIsActive())
+    if (!trainType.isCurrentlyActive())
       throw new BaseException(HttpStatus.BAD_REQUEST, "TRAIN_TYPE_INACTIVE",
         "Train type '" + typeCode + "' is inactive.");
 
@@ -107,17 +109,21 @@ public class TrainServiceImpl implements TrainService {
   // ── Toggle Status ─────────────────────────────────────────────────────────
   @Override
   @Transactional
-  public TrainResponse toggleStatus(String trainNumber, boolean isActive) {
+  public TrainResponse changeStatus(String trainNumber, ChangeStatusRequest request) {
     TrainEntity entity = findByNumber(trainNumber);
 
-    if (entity.getIsActive().equals(isActive))
-      return toResponse(entity, null);
-
-    entity.setIsActive(isActive);
+    if (request.getStatus() == ActiveStatus.ACTIVE) {
+      entity.setEffectiveFrom(request.getEffectiveFrom());
+      entity.setEffectiveTill(null);
+      entity.setReason(request.getReason());
+    } else {
+      entity.setEffectiveTill(request.getEffectiveFrom());
+      entity.setReason(request.getReason());
+    }
     entity.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     trainRepository.save(entity);
 
-    String message = isActive
+    String message = request.getStatus() == ActiveStatus.ACTIVE
       ? "Train activated. Coaches and schedules were NOT auto-reactivated — re-enable them manually."
       : "Train deactivated.";
     return toResponse(entity, message);
@@ -132,7 +138,7 @@ public class TrainServiceImpl implements TrainService {
       .entityType("TRAIN")
       .entityCode(entity.getTrainNumber())
       .entityName(entity.getTrainName())
-      .currentlyActive(entity.getIsActive())
+      .currentlyActive(entity.isCurrentlyActive())
       .activeFareRulesCount(0)
       .message("No linked records yet.")
       .build();
@@ -158,7 +164,6 @@ public class TrainServiceImpl implements TrainService {
     // Whitelist sort fields — reject anything not explicitly allowed
     String safeSortBy = switch (sortBy != null ? sortBy.trim() : "") {
       case "trainName" -> "trainName";
-      case "isActive"  -> "isActive";
       case "pantrycar" -> "pantrycar";
       default          -> "trainNumber"; // default sort
     };
@@ -304,7 +309,7 @@ public class TrainServiceImpl implements TrainService {
             .reason("Train type '" + trainTypeCode + "' not found.").build());
           continue;
         }
-        if (!typeOpt.get().getIsActive()) {
+        if (!typeOpt.get().isCurrentlyActive()) {
           errors.add(BulkUploadResponse.RowError.builder()
             .rowNumber(displayRow).trainNumber(trainNumber).trainName(trainName)
             .reason("Train type '" + trainTypeCode + "' is inactive.").build());
@@ -318,7 +323,7 @@ public class TrainServiceImpl implements TrainService {
             .reason("Zone '" + zoneCode + "' not found.").build());
           continue;
         }
-        if (!zoneOpt.get().getIsActive()) {
+        if (!zoneOpt.get().isCurrentlyActive()) {
           errors.add(BulkUploadResponse.RowError.builder()
             .rowNumber(displayRow).trainNumber(trainNumber).trainName(trainName)
             .reason("Zone '" + zoneCode + "' is inactive.").build());
@@ -459,7 +464,7 @@ public class TrainServiceImpl implements TrainService {
     ZoneEntity zone = zoneRepository.findByCode(zoneCode)
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "ZONE_NOT_FOUND",
         "Zone not found: " + zoneCode));
-    if (!zone.getIsActive())
+    if (!zone.isCurrentlyActive())
       throw new BaseException(HttpStatus.BAD_REQUEST, "ZONE_INACTIVE",
         "Zone '" + zoneCode + "' is inactive.");
     return zone;
@@ -526,7 +531,10 @@ public class TrainServiceImpl implements TrainService {
       .zoneCode(e.getZone().getCode())
       .zoneName(e.getZone().getName())
       .pantrycar(e.getPantrycar())
-      .isActive(e.getIsActive())
+      .isActive(e.isCurrentlyActive())
+      .effectiveFrom(e.getEffectiveFrom())
+      .effectiveTill(e.getEffectiveTill())
+      .reason(e.getReason())
       .createdBy(e.getCreatedBy())
       .updatedBy(e.getUpdatedBy())
       .createdAt(e.getCreatedAt())

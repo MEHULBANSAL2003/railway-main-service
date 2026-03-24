@@ -50,7 +50,7 @@ public class CityServiceImpl implements CityService{
       ));
 
     // Step 3: Check if state is active
-    if (!state.getIsActive()) {
+    if (!state.isCurrentlyActive()) {
       throw new BaseException(
         HttpStatus.BAD_REQUEST,
         "STATE_INACTIVE",
@@ -77,7 +77,6 @@ public class CityServiceImpl implements CityService{
     CityEntity city = CityEntity.builder()
       .name(cityName)
       .state(state)
-      .isActive(true)
       .build();
 
     CityEntity savedCity = cityRepository.save(city);

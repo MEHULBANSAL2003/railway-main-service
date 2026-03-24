@@ -3,8 +3,10 @@ package com.railway.main_service.service.fareRuleService;
 import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.fareRule.AddFareRuleRequest;
 import com.railway.main_service.dto.response.fareRule.FareRuleResponse;
+import com.railway.main_service.enums.ActiveStatus;
 import com.railway.main_service.entity.CoachTypeEntity;
 import com.railway.main_service.entity.FareRuleEntity;
 import com.railway.main_service.entity.QuotaEntity;
@@ -58,7 +60,7 @@ public class FareRuleServiceImpl implements FareRuleService {
     QuotaEntity quota = quotaRepository.findByQuotaCode(quotaCode)
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "QUOTA_NOT_FOUND",
         "Quota not found: " + quotaCode));
-    if (!quota.getIsActive()) {
+    if (!quota.isCurrentlyActive()) {
       throw new BaseException(HttpStatus.BAD_REQUEST, "QUOTA_INACTIVE",
         "Quota '" + quotaCode + "' is inactive.");
     }
@@ -68,7 +70,7 @@ public class FareRuleServiceImpl implements FareRuleService {
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "TRAIN_TYPE_NOT_FOUND",
         "Train type not found: " + trainCode));
 
-    if (!trainType.getIsActive()) {
+    if (!trainType.isCurrentlyActive()) {
       throw new BaseException(HttpStatus.BAD_REQUEST, "TRAIN_TYPE_INACTIVE",
         "Train type '" + trainCode + "' is inactive. Activate it before adding fare rules.");
     }
@@ -78,16 +80,16 @@ public class FareRuleServiceImpl implements FareRuleService {
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "COACH_TYPE_NOT_FOUND",
         "Coach type not found: " + coachCode));
 
-    if (!coachType.getIsActive()) {
+    if (!coachType.isCurrentlyActive()) {
       throw new BaseException(HttpStatus.BAD_REQUEST, "COACH_TYPE_INACTIVE",
         "Coach type '" + coachCode + "' is inactive. Activate it before adding fare rules.");
     }
 
-    // Validate effectiveUntil is after effectiveFrom
-    if (request.getEffectiveUntil() != null &&
-      !request.getEffectiveUntil().isAfter(request.getEffectiveFrom())) {
+    // Validate effectiveTill is after effectiveFrom
+    if (request.getEffectiveTill() != null &&
+      !request.getEffectiveTill().isAfter(request.getEffectiveFrom())) {
       throw new BaseException(HttpStatus.BAD_REQUEST, "INVALID_DATE_RANGE",
-        "Effective until date must be after effective from date.");
+        "Effective till date must be after effective from date.");
     }
 
     // Check duplicate combo + date
@@ -121,7 +123,7 @@ public class FareRuleServiceImpl implements FareRuleService {
 
     // Auto-close previous open rule for this combo
     fareRuleRepository.findOpenRule(trainCode, coachCode, quotaCode).ifPresent(existing -> {
-      existing.setEffectiveUntil(request.getEffectiveFrom().minusDays(1));
+      existing.setEffectiveTill(request.getEffectiveFrom().minusDays(1));
       existing.setUpdatedBy(SecurityUtils.getCurrentAdminId());
       fareRuleRepository.save(existing);
     });
@@ -137,7 +139,7 @@ public class FareRuleServiceImpl implements FareRuleService {
       .superfastCharge(request.getSuperfastCharge())
       .gstPct(request.getGstPct())
       .effectiveFrom(request.getEffectiveFrom())
-      .effectiveUntil(request.getEffectiveUntil())
+      .effectiveTill(request.getEffectiveTill())
       .createdBy(SecurityUtils.getCurrentAdminId())
       .build();
 
@@ -147,17 +149,22 @@ public class FareRuleServiceImpl implements FareRuleService {
 
   @Override
   @Transactional
-  public FareRuleResponse toggleStatus(Long ruleId, boolean isActive) {
+  public FareRuleResponse changeStatus(Long ruleId, ChangeStatusRequest request) {
     FareRuleEntity entity = fareRuleRepository.findById(ruleId)
-      .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "FARE_RULE_NOT_FOUND",
-        "Fare rule not found with id: " + ruleId));
+        .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "FARE_RULE_NOT_FOUND",
+            "Fare rule not found with id: " + ruleId));
 
-    if (entity.getIsActive().equals(isActive))
-      return toResponse(entity, null);
-    entity.setIsActive(isActive);
+    if (request.getStatus() == ActiveStatus.ACTIVE) {
+        entity.setEffectiveFrom(request.getEffectiveFrom());
+        entity.setEffectiveTill(null);
+        entity.setReason(request.getReason());
+    } else {
+        entity.setEffectiveTill(request.getEffectiveFrom());
+        entity.setReason(request.getReason());
+    }
     entity.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     return toResponse(fareRuleRepository.save(entity),
-      "Fare rule " + (isActive ? "activated" : "deactivated") + " successfully.");
+        request.getStatus() == ActiveStatus.ACTIVE ? "Fare rule activated successfully." : "Fare rule deactivated successfully.");
   }
 
   @Override
@@ -189,9 +196,7 @@ public class FareRuleServiceImpl implements FareRuleService {
 
   // ── Mapper ───────────────────────────────────────────────
   private FareRuleResponse toResponse(FareRuleEntity e, String message) {
-    boolean isCurrent = e.getIsActive()
-      && !LocalDate.now().isBefore(e.getEffectiveFrom())
-      && (e.getEffectiveUntil() == null || !LocalDate.now().isAfter(e.getEffectiveUntil()));
+    boolean active = e.isCurrentlyActive();
 
     return FareRuleResponse.builder()
       .ruleId(e.getRuleId())
@@ -210,9 +215,10 @@ public class FareRuleServiceImpl implements FareRuleService {
       .superfastCharge(e.getSuperfastCharge())
       .gstPct(e.getGstPct())
       .effectiveFrom(e.getEffectiveFrom())
-      .effectiveUntil(e.getEffectiveUntil())
-      .isActive(e.getIsActive())
-      .isCurrent(isCurrent)
+      .effectiveTill(e.getEffectiveTill())
+      .reason(e.getReason())
+      .isActive(active)
+      .isCurrent(active)
       .createdBy(e.getCreatedBy())
       .createdAt(e.getCreatedAt())
       .updatedAt(e.getUpdatedAt())

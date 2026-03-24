@@ -13,5 +13,5 @@ public class ReactivateCoachRequest {
 
   @NotBlank(message = "Reason for reactivation is required.")
   @Size(max = 500)
-  private String changeReason;
+  private String reason;
 }

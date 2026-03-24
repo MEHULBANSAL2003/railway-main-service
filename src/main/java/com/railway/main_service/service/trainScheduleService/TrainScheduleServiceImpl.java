@@ -3,9 +3,11 @@ package com.railway.main_service.service.trainScheduleService;
 import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.common.security.SecurityUtils;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.trainSchedule.AddTrainScheduleRequest;
 import com.railway.main_service.dto.response.trainSchedule.TrainScheduleResponse;
 import com.railway.main_service.dto.response.trainSchedule.TrainScheduleSummaryResponse;
+import com.railway.main_service.enums.ActiveStatus;
 import com.railway.main_service.entity.TrainEntity;
 import com.railway.main_service.entity.TrainScheduleEntity;
 import com.railway.main_service.enums.RunDay;
@@ -151,7 +153,6 @@ public class TrainScheduleServiceImpl implements TrainScheduleService {
       .runsOnDays(TrainScheduleEntity.toDayString(newDays))
       .startDate(startDate)
       .endDate(null)   // indefinite until another schedule is created
-      .isActive(true)
       .createdBy(SecurityUtils.getCurrentAdminId())
       .build();
 
@@ -164,10 +165,10 @@ public class TrainScheduleServiceImpl implements TrainScheduleService {
       "Schedule created successfully. Effective from " + startDate + ".");
   }
 
-  // ── Toggle Schedule ───────────────────────────────────────────────────────
+  // ── Change Schedule Status ───────────────────────────────────────────────
   @Override
   @Transactional
-  public TrainScheduleResponse toggleSchedule(String trainNumber, Long scheduleId) {
+  public TrainScheduleResponse changeScheduleStatus(String trainNumber, Long scheduleId, ChangeStatusRequest request) {
     TrainEntity train = findTrain(trainNumber);
     LocalDate   today = LocalDate.now();
 
@@ -176,8 +177,8 @@ public class TrainScheduleServiceImpl implements TrainScheduleService {
       .orElseThrow(() -> new BaseException(HttpStatus.NOT_FOUND, "SCHEDULE_NOT_FOUND",
         "Schedule not found for train " + trainNumber + "."));
 
-    // ── Determine current status ──────────────────────────────────────────────
-    boolean isRunning = schedule.getIsActive()
+    // Determine current status
+    boolean isRunning = schedule.isCurrentlyActive()
       && !schedule.getStartDate().isAfter(today)
       && (schedule.getEndDate() == null || !schedule.getEndDate().isBefore(today));
 
@@ -187,30 +188,31 @@ public class TrainScheduleServiceImpl implements TrainScheduleService {
           "Create a new schedule to replace it — it will automatically end this one.");
     }
 
-    boolean currentlyActive = schedule.getIsActive();
-
-    if (!currentlyActive) {
-      // ── Reactivating — check no other active upcoming exists ──────────────
+    if (request.getStatus() == ActiveStatus.ACTIVE) {
+      // Reactivating — check no other active upcoming exists
       boolean isUpcoming = schedule.getStartDate().isAfter(today);
       if (isUpcoming && scheduleRepository.hasActiveUpcoming(train.getTrainId(), today)) {
         throw new BaseException(HttpStatus.CONFLICT, "UPCOMING_ALREADY_ACTIVE",
           "Another upcoming schedule is already active. " +
             "Deactivate it before reactivating this one.");
       }
+      schedule.setEffectiveFrom(request.getEffectiveFrom());
+      schedule.setEffectiveTill(null);
+      schedule.setReason(request.getReason());
+    } else {
+      schedule.setEffectiveTill(request.getEffectiveFrom());
+      schedule.setReason(request.getReason());
     }
-
-    // ── Toggle ────────────────────────────────────────────────────────────────
-    schedule.setIsActive(!currentlyActive);
     schedule.setUpdatedBy(SecurityUtils.getCurrentAdminId());
     scheduleRepository.save(schedule);
 
     String newStatus = deriveStatus(schedule, today);
-    String msg = currentlyActive
+    String msg = request.getStatus() == ActiveStatus.INACTIVE
       ? "Schedule deactivated."
       : "Schedule reactivated.";
 
-    log.info("Toggled schedule {} for train {} → isActive={}",
-      scheduleId, trainNumber, schedule.getIsActive());
+    log.info("Changed schedule {} status for train {} → status={}",
+      scheduleId, trainNumber, request.getStatus());
 
     return toResponse(schedule, newStatus, null, null, trainNumber, msg);
   }
@@ -232,7 +234,7 @@ public class TrainScheduleServiceImpl implements TrainScheduleService {
   }
 
   private String deriveStatus(TrainScheduleEntity e, LocalDate today) {
-    if (!e.getIsActive()) return "DEACTIVATED";
+    if (!e.isCurrentlyActive()) return "DEACTIVATED";
     if (e.getStartDate().isAfter(today)) return "UPCOMING";
     if (e.getEndDate() != null && e.getEndDate().isBefore(today)) return "PAST";
     return "RUNNING";
@@ -255,7 +257,10 @@ public class TrainScheduleServiceImpl implements TrainScheduleService {
       .runDays(days)
       .startDate(e.getStartDate())
       .endDate(e.getEndDate())
-      .isActive(e.getIsActive())
+      .isActive(e.isCurrentlyActive())
+      .effectiveFrom(e.getEffectiveFrom())
+      .effectiveTill(e.getEffectiveTill())
+      .reason(e.getReason())
       .status(status)
       .addedDays(addedDays)
       .removedDays(removedDays)

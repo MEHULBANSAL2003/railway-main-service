@@ -9,6 +9,7 @@ import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.train.BulkUploadResponse;
 import com.railway.main_service.dto.response.train.ReturnTrainResponse;
 import com.railway.main_service.dto.response.train.TrainResponse;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.service.trainService.TrainService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,10 +48,10 @@ public class TrainController {
 
   @PostMapping(ApiConstants.TRAIN_STATUS)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<TrainResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<TrainResponse>> changeStatus(
     @PathVariable String trainNumber,
-    @RequestParam boolean isActive) {
-    return ResponseEntity.ok(ApiResponse.success(trainService.toggleStatus(trainNumber, isActive)));
+    @Valid @RequestBody ChangeStatusRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(trainService.changeStatus(trainNumber, request)));
   }
 
   // ── Queries ───────────────────────────────────────────────────────────────

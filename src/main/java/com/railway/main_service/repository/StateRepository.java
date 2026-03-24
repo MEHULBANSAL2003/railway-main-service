@@ -16,7 +16,10 @@ public interface StateRepository extends JpaRepository<StateEntity, Long> {
 
   Optional<StateEntity> findByName(String name);
 
-  List<StateEntity> findAllByIsActiveTrueOrderByName();
+  @Query("SELECT s FROM StateEntity s " +
+    "WHERE s.effectiveFrom <= CURRENT_DATE AND (s.effectiveTill IS NULL OR s.effectiveTill > CURRENT_DATE) " +
+    "ORDER BY s.name ASC")
+  List<StateEntity> findAllActiveOrderByName();
 
   boolean existsByCode(String code);
 
@@ -24,7 +27,7 @@ public interface StateRepository extends JpaRepository<StateEntity, Long> {
 
   @Query("""
     SELECT s FROM StateEntity s
-    WHERE s.isActive = true
+    WHERE s.effectiveFrom <= CURRENT_DATE AND (s.effectiveTill IS NULL OR s.effectiveTill > CURRENT_DATE)
     AND (
         LOWER(s.name) LIKE LOWER(CONCAT(:searchTerm, '%'))
         OR LOWER(s.code) LIKE LOWER(CONCAT(:searchTerm, '%'))
@@ -32,7 +35,9 @@ public interface StateRepository extends JpaRepository<StateEntity, Long> {
 """)
   List<StateEntity> searchActiveStates(String searchTerm);
 
-  List<StateEntity> findByIsActiveTrue();
+  @Query("SELECT s FROM StateEntity s " +
+    "WHERE s.effectiveFrom <= CURRENT_DATE AND (s.effectiveTill IS NULL OR s.effectiveTill > CURRENT_DATE)")
+  List<StateEntity> findAllActive();
 
   Optional<StateEntity> findByNameIgnoreCase(String name);
 }

@@ -5,6 +5,7 @@ import com.railway.common.exceptions.BaseException;
 import com.railway.common.logging.Loggable;
 import com.railway.main_service.constants.ApiConstants;
 import com.railway.main_service.dto.request.Pagination.PageRequestDto;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.station.AddNewStationRequest;
 import com.railway.main_service.dto.request.station.DeleteStationRequest;
 import com.railway.main_service.dto.request.station.StationFilterRequest;
@@ -78,9 +79,10 @@ public ResponseEntity<ApiResponse<PageResponseDto<StationResponse>>> getAllStati
 
   @PostMapping(ApiConstants.SET_ACTIVE_INACTIVE)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<StationResponse>> changeStatus(@PathVariable String stationCode, @RequestParam(value = "activeStatus", required = true) boolean activeStatus){
-
-    StationResponse response = stationService.updateActiveInactiveStatus(stationCode,activeStatus);
+  public ResponseEntity<ApiResponse<StationResponse>> changeStatus(
+    @PathVariable String stationCode,
+    @Valid @RequestBody ChangeStatusRequest request) {
+    StationResponse response = stationService.changeStatus(stationCode, request);
     return ResponseEntity.ok(ApiResponse.success(response));
   }
 

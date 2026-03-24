@@ -2,6 +2,7 @@ package com.railway.main_service.controller;
 
 import com.railway.common.exceptions.ApiResponse;
 import com.railway.main_service.constants.ApiConstants;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.fareRule.AddFareRuleRequest;
 import com.railway.main_service.dto.response.fareRule.FareRuleResponse;
 import com.railway.main_service.service.fareRuleService.FareRuleService;
@@ -33,11 +34,11 @@ public class FareRuleController {
 
   @PostMapping(ApiConstants.FARE_RULE_STATUS)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<FareRuleResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<FareRuleResponse>> changeStatus(
     @PathVariable Long ruleId,
-    @RequestParam boolean isActive) {
+    @Valid @RequestBody ChangeStatusRequest request) {
     return ResponseEntity.ok(ApiResponse.success(
-      fareRuleService.toggleStatus(ruleId, isActive)));
+      fareRuleService.changeStatus(ruleId, request)));
   }
 
   @GetMapping(ApiConstants.GET_FARE_RULES_ADMIN)

@@ -1,5 +1,6 @@
 package com.railway.main_service.service.trainCoachService;
 
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.dto.request.trainCoach.AddTrainCoachRequest;
 import com.railway.main_service.dto.request.trainCoach.UpdateTrainCoachRequest;
 import com.railway.main_service.dto.response.trainCoach.CoachTypeDropdownResponse;
@@ -14,7 +15,7 @@ public interface TrainCoachService {
 
   TrainCoachResponse updateCoach(String trainNumber, Long coachId, UpdateTrainCoachRequest request);
 
-  TrainCoachResponse toggleStatus(String trainNumber, Long coachId, boolean isActive);
+  TrainCoachResponse changeStatus(String trainNumber, Long coachId, ChangeStatusRequest request);
 
   // Active coaches today (effectiveFrom <= today <= effectiveTo or null)
   List<TrainCoachResponse> getAllByTrain(String trainNumber);

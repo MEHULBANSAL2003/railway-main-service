@@ -8,6 +8,7 @@ import com.railway.main_service.dto.request.trainType.UpdateTrainTypeRequest;
 import com.railway.main_service.dto.response.cascade.CascadeInfoResponse;
 import com.railway.main_service.dto.response.trainType.AllowedCoachResponse;
 import com.railway.main_service.dto.response.trainType.TrainTypeResponse;
+import com.railway.main_service.dto.request.common.ChangeStatusRequest;
 import com.railway.main_service.service.trainTypeService.TrainTypeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -48,11 +49,11 @@ public class TrainTypeController {
 
   @PostMapping(ApiConstants.CHANGE_STATUS)
   @PreAuthorize("hasRole('SUPER_ADMIN')")
-  public ResponseEntity<ApiResponse<TrainTypeResponse>> toggleStatus(
+  public ResponseEntity<ApiResponse<TrainTypeResponse>> changeStatus(
     @PathVariable String typeCode,
-    @RequestParam boolean isActive) {
+    @Valid @RequestBody ChangeStatusRequest request) {
     return ResponseEntity.ok(ApiResponse.success(
-      trainTypeService.toggleStatus(typeCode, isActive)));
+      trainTypeService.changeStatus(typeCode, request)));
   }
 
   @GetMapping(ApiConstants.GET_TRAIN_TYPES)
