@@ -59,7 +59,7 @@ public class FareRuleEntity implements Activatable {
   @Builder.Default
   private BigDecimal gstPct = BigDecimal.ZERO;
 
-  // ── Effective date range (renamed: effectiveUntil → effectiveTill, added reason, removed isActive) ──
+  // ── Effective date range ──
   @Column(name = "effective_from", nullable = false)
   private LocalDate effectiveFrom;
 

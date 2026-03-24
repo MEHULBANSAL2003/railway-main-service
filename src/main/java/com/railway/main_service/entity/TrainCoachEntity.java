@@ -43,7 +43,7 @@ public class TrainCoachEntity implements Activatable {
   @Builder.Default
   private Integer waitlistLimit = 0;
 
-  // ── Effective date range (renamed: effectiveTo → effectiveTill, changeReason → reason, removed isActive) ──
+  // ── Effective date range ──
   @Column(name = "effective_from", nullable = false)
   private LocalDate effectiveFrom;
 

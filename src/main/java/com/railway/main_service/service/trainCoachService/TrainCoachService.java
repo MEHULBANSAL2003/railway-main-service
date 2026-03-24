@@ -17,10 +17,10 @@ public interface TrainCoachService {
 
   TrainCoachResponse changeStatus(String trainNumber, Long coachId, ChangeStatusRequest request);
 
-  // Active coaches today (effectiveFrom <= today <= effectiveTo or null)
+  // Active coaches today (effectiveFrom <= today AND effectiveTill is null or future)
   List<TrainCoachResponse> getAllByTrain(String trainNumber);
 
-  // Deactivated coaches (effectiveTo in the past)
+  // Deactivated coaches (effectiveTill in the past)
   List<TrainCoachResponse> getInactiveByTrain(String trainNumber);
 
   List<CoachTypeDropdownResponse> getAvailableCoachTypes(String trainNumber);
