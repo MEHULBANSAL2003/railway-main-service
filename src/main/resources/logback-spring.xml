@@ -1,24 +1,90 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Path: src/main/resources/logback-spring.xml
+
+    Identical structure to railway-auth-service logback config.
+    Only difference: APP_NAME = railway-main-service
+-->
 <configuration>
-  <!-- Set service-specific APP_NAME -->
-  <property name="APP_NAME" value="railway-main-service"/>
 
-  <!-- Include common logging configuration -->
-  <include resource="logback-common.xml"/>
+  <!-- Read app name from application.yml -->
+  <springProperty scope="context" name="APP_NAME"
+                  source="spring.application.name"
+                  defaultValue="railway-main-service"/>
 
-  <!-- Service-specific logger overrides (optional) -->
-  <springProfile name="dev,local">
-    <logger name="com.railway.main_service" level="DEBUG" additivity="false">
+  <!--
+      DEV PROFILE — human-readable console logs
+      correlationId visible in brackets
+  -->
+  <springProfile name="dev | default">
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>%d{HH:mm:ss.SSS} [%X{correlationId:-none}] %-5level %logger{36} - %msg%n%ex</pattern>
+        <charset>UTF-8</charset>
+      </encoder>
+    </appender>
+
+    <root level="INFO">
       <appender-ref ref="CONSOLE"/>
-      <appender-ref ref="FILE"/>
+    </root>
+
+    <!-- App packages — verbose in dev -->
+    <logger name="com.railway" level="DEBUG" additivity="false">
+      <appender-ref ref="CONSOLE"/>
     </logger>
+
+    <logger name="org.springframework.security" level="INFO"/>
+    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    <logger name="org.hibernate.type.descriptor.sql" level="TRACE"/>
+
   </springProfile>
 
+  <!--
+      PROD PROFILE — structured JSON logs
+      CloudWatch can query every field independently
+  -->
   <springProfile name="prod">
-    <logger name="com.railway.main_service" level="INFO" additivity="false">
-      <appender-ref ref="ASYNC_FILE"/>
-      <appender-ref ref="ASYNC_ERROR"/>
-      <appender-ref ref="ASYNC_JSON"/>
+
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <!-- Add service name to every log line -->
+        <customFields>{"service":"${APP_NAME}"}</customFields>
+
+        <!-- Include correlationId from MDC automatically -->
+        <includeMdcKeyName>correlationId</includeMdcKeyName>
+
+        <!-- ISO timestamp -->
+        <timestampPattern>yyyy-MM-dd'T'HH:mm:ss.SSS'Z'</timestampPattern>
+
+        <!-- Clean stack traces — only your code, no Spring internals -->
+        <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+          <maxDepthPerThrowable>30</maxDepthPerThrowable>
+          <maxLength>2048</maxLength>
+          <shortenedClassNameLength>36</shortenedClassNameLength>
+          <exclude>org\.springframework\..*</exclude>
+          <exclude>sun\.reflect\..*</exclude>
+          <exclude>java\.lang\.reflect\..*</exclude>
+          <rootCauseFirst>true</rootCauseFirst>
+        </throwableConverter>
+      </encoder>
+    </appender>
+
+    <root level="INFO">
+      <appender-ref ref="JSON_CONSOLE"/>
+    </root>
+
+    <logger name="com.railway" level="INFO" additivity="false">
+      <appender-ref ref="JSON_CONSOLE"/>
     </logger>
+
+    <!-- Silence noisy libraries in prod -->
+    <logger name="org.springframework.security" level="WARN"/>
+    <logger name="org.hibernate.SQL" level="WARN"/>
+    <logger name="org.hibernate.type.descriptor.sql" level="WARN"/>
+    <logger name="org.apache.kafka" level="WARN"/>
+
   </springProfile>
+
 </configuration>
