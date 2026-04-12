@@ -82,6 +82,7 @@ public class SecurityConfig {
         // and monitoring tools can check health without a token.
         // Only expose health — not metrics, not env, not beans.
         .requestMatchers("/actuator/health").permitAll()
+        .requestMatchers("/api/main/train").permitAll()
 
         // Everything else requires a valid JWT.
         // No public endpoints in main-service — unlike auth-service
