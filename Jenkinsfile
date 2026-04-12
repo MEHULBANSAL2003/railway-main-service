@@ -110,10 +110,6 @@ pipeline {
                         ? 'prod-ec2-ssh'
                         : 'dev-ec2-ssh'
 
-                    def containerName = params.ENVIRONMENT == 'prod'
-                        ? 'main-service'
-                        : 'main-service'
-
                     sshagent([sshCredential]) {
                         sh """
                             ssh -o StrictHostKeyChecking=no ubuntu@${backendHost} '
