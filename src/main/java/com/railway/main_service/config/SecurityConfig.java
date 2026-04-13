@@ -1,6 +1,7 @@
 package com.railway.main_service.config;
 
 import com.railway.common.security.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -74,6 +75,13 @@ public class SecurityConfig {
       // This is the only correct mode for microservices.
       .sessionManagement(session ->
         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+      )
+      .exceptionHandling(ex -> ex
+        .authenticationEntryPoint((request, response, authException) -> {
+          response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+          response.setContentType("application/json");
+          response.getWriter().write("{\"error\": \"Authentication required\"}");
+        })
       )
 
       .authorizeHttpRequests(auth -> auth
